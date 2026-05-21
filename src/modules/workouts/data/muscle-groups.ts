@@ -1,0 +1,82 @@
+import type { Exercise, MuscleGroup } from '../types';
+
+export const MUSCLE_GROUPS: MuscleGroup[] = [
+  { id: 'chest', name: 'Peito', color: '#E53E3E' },
+  { id: 'back', name: 'Costas', color: '#3182CE' },
+  { id: 'shoulders', name: 'Ombros', color: '#805AD5' },
+  { id: 'biceps', name: 'Bíceps', color: '#D69E2E' },
+  { id: 'triceps', name: 'Tríceps', color: '#38A169' },
+  { id: 'legs', name: 'Pernas', color: '#DD6B20' },
+  { id: 'glutes', name: 'Glúteos', color: '#D53F8C' },
+  { id: 'core', name: 'Abdômen', color: '#2B6CB0' },
+];
+
+export const DEFAULT_EXERCISES: Exercise[] = [
+  // Peito
+  { id: 'chest-1', name: 'Supino Reto', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Supino Reto.gif') },
+  { id: 'chest-2', name: 'Supino Inclinado com Barra', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Supino inclinado com barra.gif') },
+  { id: 'chest-3', name: 'Supino Declinado com Halteres', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Supino Declinado com Halteres.gif') },
+  { id: 'chest-4', name: 'Supino com Halteres', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Supino com Halteres.gif') },
+  { id: 'chest-5', name: 'Crucifixo com Halteres Inclinado', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Crucifixo com Halteres Inclinado.gif') },
+  { id: 'chest-6', name: 'Crossover Unilateral com Cabo', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Crossover Unilateral com Cabo.gif') },
+  { id: 'chest-7', name: 'Flexão de Braço', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Flexão de braço.gif') },
+  { id: 'chest-8', name: 'Voador no Pec Deck', muscleGroupId: 'chest', gif: require('../../../../assets/gifs/Peito/Voador no pec deck.gif') },
+  // Costas
+  { id: 'back-1', name: 'Levantamento Terra', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Levantamento Terra.gif') },
+  { id: 'back-2', name: 'Pull-up', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Pull Up.gif') },
+  { id: 'back-3', name: 'Pullover com Cabo Sentado', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Pullover com cabo sentado.gif') },
+  { id: 'back-4', name: 'Puxada de Face com Cabo Cruzado', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Puxada de face com cabo cruzado.gif') },
+  { id: 'back-5', name: 'Remada Sentada com Cabo', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Remada Sentada com Cabo.gif') },
+  { id: 'back-6', name: 'Remada Sentada com Corda na Polia', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Remada Sentada com Corda na Polia.gif') },
+  { id: 'back-7', name: 'Remada Sentada na Máquina', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Remada Sentada na Máquina.gif') },
+  { id: 'back-8', name: 'Remada Unilateral com Cabo', muscleGroupId: 'back', gif: require('../../../../assets/gifs/Costas/Remada Unilateral com Cabo.gif') },
+  // Ombros
+  { id: 'shoulders-1', name: 'Desenvolvimento Arnold', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Desenvolvimento Arnold.gif') },
+  { id: 'shoulders-2', name: 'Desenvolvimento Cubano com Halteres', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Desenvolvimento Cubano com Halteres.gif') },
+  { id: 'shoulders-3', name: 'Desenvolvimento de Ombro na Máquina', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Desenvolvimento de ombro na máquina.gif') },
+  { id: 'shoulders-4', name: 'Elevação Frontal com Dois Braços', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Elevação frontal com dois braços com halteres.gif') },
+  { id: 'shoulders-5', name: 'Elevação Frontal com Halteres', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Elevação frontal com halteres.gif') },
+  { id: 'shoulders-6', name: 'Elevação Lateral com Cabo', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Elevação lateral de braços com cabo.gif') },
+  { id: 'shoulders-7', name: 'Remada Alta', muscleGroupId: 'shoulders', gif: require('../../../../assets/gifs/Ombros/Remada Alta (1).gif') },
+  // Bíceps
+  { id: 'biceps-1', name: 'Rosca Banco Inclinado', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca Banco Inclinado.gif') },
+  { id: 'biceps-2', name: 'Rosca Concentrada', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca concentrada.gif') },
+  { id: 'biceps-3', name: 'Rosca Direta com Barra W', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca direta com barra w.gif') },
+  { id: 'biceps-4', name: 'Rosca Inversa com Halteres', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca Inversa com Halteres.gif') },
+  { id: 'biceps-5', name: 'Rosca Martelo', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca martelo.gif') },
+  { id: 'biceps-6', name: 'Rosca no Cabo', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca no Cabo.gif') },
+  { id: 'biceps-7', name: 'Rosca Scott com Barra W', muscleGroupId: 'biceps', gif: require('../../../../assets/gifs/Bíceps/Rosca Scott com Barra W.gif') },
+  // Tríceps
+  { id: 'triceps-1', name: 'Extensão de Tríceps Unilateral Sentado', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Extensão de tríceps com haltere unilateral sentado.gif') },
+  { id: 'triceps-2', name: 'Extensão de Tríceps Deitado com Barra W', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Extensão de Tríceps deitado com Barra W Pegada Fechada atrás da Cabeça.gif') },
+  { id: 'triceps-3', name: 'Extensão de Tríceps Invertida', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Extensão de Tríceps Invertida com unilateral.gif') },
+  { id: 'triceps-4', name: 'Mergulho de Tríceps', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Mergulho de tríceps com alavanca.gif') },
+  { id: 'triceps-5', name: 'Supino Fechado', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Supino Fechado.gif') },
+  { id: 'triceps-6', name: 'Tríceps Pulley Barra V', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Tríceps Pulley barra V.gif') },
+  { id: 'triceps-7', name: 'Tríceps Pulley Corda', muscleGroupId: 'triceps', gif: require('../../../../assets/gifs/Trícipes/Tríceps pulley corda.gif') },
+  // Pernas
+  { id: 'legs-1', name: 'Agachamento com Barra', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Agachamento Barra.gif') },
+  { id: 'legs-2', name: 'Agachamento Búlgaro com Halteres', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Agachamento Búlgaro com Halteres.gif') },
+  { id: 'legs-3', name: 'Agachamento na Máquina Hack', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Agachamento na Máquina Hack.gif') },
+  { id: 'legs-4', name: 'Agachamento Sumô com Halteres', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Agachamento Sumô com Halteres.gif') },
+  { id: 'legs-5', name: 'Cadeira Extensora', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Cadeira extensora.gif') },
+  { id: 'legs-6', name: 'Cadeira Flexora', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Cadeira flexora.gif') },
+  { id: 'legs-7', name: 'Elevação de Panturrilha Sentado', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Elevação de Panturrilha Sentado com Alavanca.gif') },
+  { id: 'legs-8', name: 'Leg Press', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Leg Press.gif') },
+  { id: 'legs-9', name: 'Panturrilha em Pé no Smith', muscleGroupId: 'legs', gif: require('../../../../assets/gifs/Pernas/Panturrilha em Pé no Smith.gif') },
+  // Glúteos
+  { id: 'glutes-1', name: 'Abdução de Quadril com Cabo', muscleGroupId: 'glutes', gif: require('../../../../assets/gifs/Glúteos/Abdução de quadril com cabo.gif') },
+  { id: 'glutes-2', name: 'Elevação Pélvica com Barra', muscleGroupId: 'glutes', gif: require('../../../../assets/gifs/Glúteos/Elevação Pélvica Com Barra.gif') },
+  { id: 'glutes-3', name: 'Extensão de Quadril em Pé', muscleGroupId: 'glutes', gif: require('../../../../assets/gifs/Glúteos/Extensão de Quadril em Pé com Alavanca.gif') },
+  { id: 'glutes-4', name: 'Glúteo Coice na Máquina', muscleGroupId: 'glutes', gif: require('../../../../assets/gifs/Glúteos/Glúteo Coice Na Máquina.gif') },
+  { id: 'glutes-5', name: 'Glúteo na Polia Baixa', muscleGroupId: 'glutes', gif: require('../../../../assets/gifs/Glúteos/Glúteos na Polia Baixa.gif') },
+  // Abdômen
+  { id: 'core-1', name: 'Abdominal de Rã', muscleGroupId: 'core', gif: require('../../../../assets/gifs/Abdomen/Cópia de Abdominal de Rã com Bola de Exercícios.gif') },
+  { id: 'core-2', name: 'Abdominal Crunch', muscleGroupId: 'core' },
+  { id: 'core-3', name: 'Prancha', muscleGroupId: 'core' },
+  { id: 'core-4', name: 'Elevação de Pernas', muscleGroupId: 'core' },
+  { id: 'core-5', name: 'Oblíquo Russo', muscleGroupId: 'core' },
+  { id: 'core-6', name: 'Prancha Lateral', muscleGroupId: 'core' },
+  { id: 'core-7', name: 'Mountain Climber', muscleGroupId: 'core' },
+  { id: 'core-8', name: 'Abdominal Bicicleta', muscleGroupId: 'core' },
+];
