@@ -9,7 +9,6 @@ import { signOut } from '@/modules/auth/services/auth-service';
 import { DEFAULT_EXERCISES, MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { Button } from '@/shared/components/button';
 import { Container } from '@/shared/components/container';
-import { Header } from '@/shared/components/header';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
@@ -283,8 +282,7 @@ export default function HomeScreen() {
 
 
   return (
-    <Container safe={false}>
-      <Header />
+    <Container>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 24 }}

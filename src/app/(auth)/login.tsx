@@ -76,6 +76,13 @@ export default function LoginScreen() {
                   />
                 )}
               />
+
+              <Text
+                className="text-primary text-sm text-right"
+                onPress={() => router.push('/(auth)/forgot-password')}
+              >
+                Esqueci minha senha
+              </Text>
             </View>
 
             {error != null && (

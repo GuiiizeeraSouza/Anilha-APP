@@ -1,3 +1,4 @@
+import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Slot, SplashScreen, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +8,7 @@ import '@/global.css';
 import { savePushToken } from '@/lib/notification-service';
 import { supabase } from '@/lib/supabase';
 import * as workoutService from '@/lib/workout-service';
+import { parseAuthCallbackUrl } from '@/modules/auth/utils/parse-auth-callback-url';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
@@ -21,13 +23,15 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
-  const { session, loading, setSession, setLoading, setUser } = useAuthStore();
+  const { session, loading, isPasswordRecovery, setSession, setLoading, setUser, setPasswordRecovery } =
+    useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
   const setWorkouts = useWorkoutStore((s) => s.setWorkouts);
   const setCustomExercises = useWorkoutStore((s) => s.setCustomExercises);
   const setCompletedSessions = useWorkoutStore((s) => s.setCompletedSessions);
+  const setExerciseGifOverrides = useWorkoutStore((s) => s.setExerciseGifOverrides);
   const resetStore = useWorkoutStore((s) => s.resetStore);
 
   // Inicializa a sessão e registra listener de mudança de autenticação
@@ -54,6 +58,29 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, [setSession, setLoading]);
 
+  // Trata o link de recuperação de senha (e-mail "esqueci minha senha").
+  // Os tokens vêm como fragmento (#access_token=...) na URL, não como query string.
+  useEffect(() => {
+    async function handleUrl(url: string | null) {
+      if (!url) return;
+
+      const { access_token, refresh_token, type } = parseAuthCallbackUrl(url);
+      if (type !== 'recovery' || !access_token || !refresh_token) return;
+
+      setPasswordRecovery(true);
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (error) {
+        setPasswordRecovery(false);
+        return;
+      }
+      router.replace('/(auth)/reset-password');
+    }
+
+    Linking.getInitialURL().then(handleUrl);
+    const subscription = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => subscription.remove();
+  }, [router, setPasswordRecovery]);
+
   // Salva push token quando o usuário loga
   useEffect(() => {
     const userId = session?.user?.id;
@@ -71,11 +98,13 @@ export default function RootLayout() {
       workoutService.fetchWorkouts(userId),
       workoutService.fetchCustomExercises(userId),
       workoutService.fetchCompletedSessions(userId),
+      workoutService.fetchExerciseGifOverrides(userId),
     ])
-      .then(([workouts, exercises, sessions]) => {
+      .then(([workouts, exercises, sessions, gifOverrides]) => {
         setWorkouts(workouts);
         setCustomExercises(exercises);
         setCompletedSessions(sessions);
+        setExerciseGifOverrides(gifOverrides);
       })
       .catch(console.error);
   }, [userId]);
@@ -86,6 +115,11 @@ export default function RootLayout() {
 
     SplashScreen.hideAsync().catch(() => {});
 
+    // Durante o fluxo de "esqueci minha senha" já existe uma sessão válida
+    // (criada a partir do link de recuperação), mas o usuário ainda não
+    // definiu a nova senha — não deixa o guard mandar ele pra home.
+    if (isPasswordRecovery) return;
+
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!session && !inAuthGroup) {
@@ -93,13 +127,13 @@ export default function RootLayout() {
     } else if (session && inAuthGroup) {
       router.replace('/(app)/home');
     }
-  }, [session, loading, segments, router]);
+  }, [session, loading, segments, router, isPasswordRecovery]);
 
   if (loading) return null;
 
   return (
     <>
-      <StatusBar style="light" backgroundColor="#121212" />
+      <StatusBar style="light" />
       <Slot />
     </>
   );

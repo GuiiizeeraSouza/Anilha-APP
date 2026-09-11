@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } fr
 import { supabase } from '@/lib/supabase';
 import { Container } from '@/shared/components/container';
 import { useAuthStore } from '@/store/auth-store';
-import { Header } from '@react-navigation/elements';
+import { Header } from 'expo-router/react-navigation';
 
 export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);

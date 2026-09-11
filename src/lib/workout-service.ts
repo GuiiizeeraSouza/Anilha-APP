@@ -1,3 +1,5 @@
+import { File } from 'expo-file-system';
+
 import type { Exercise, Workout } from '@/modules/workouts/types';
 import type { CompletedSession } from '@/store/workout-store';
 
@@ -45,6 +47,19 @@ export async function fetchCustomExercises(userId: string): Promise<Exercise[]> 
     muscleGroupId: e.muscle_group_id as string,
     isCustom: true,
   }));
+}
+
+export async function fetchExerciseGifOverrides(userId: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('exercise_gif_overrides')
+    .select('exercise_id, gif_url')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((row: any) => [row.exercise_id as string, row.gif_url as string])
+  );
 }
 
 export async function fetchCompletedSessions(userId: string): Promise<CompletedSession[]> {
@@ -106,6 +121,38 @@ export async function insertCustomExercise(userId: string, exercise: Exercise): 
     name: exercise.name,
     muscle_group_id: exercise.muscleGroupId,
   });
+  if (error) throw error;
+}
+
+export async function uploadExerciseGif(
+  userId: string,
+  exerciseId: string,
+  uri: string,
+  mimeType?: string,
+): Promise<string> {
+  const ext = uri.split('.').pop()?.toLowerCase() ?? 'gif';
+  const path = `${userId}/${exerciseId}.${ext}`;
+
+  const file = new File(uri);
+  const arrayBuffer = await file.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from('exercise-gifs')
+    .upload(path, arrayBuffer, { contentType: mimeType ?? 'image/gif', upsert: true });
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from('exercise-gifs').getPublicUrl(path);
+  return `${data.publicUrl}?t=${Date.now()}`;
+}
+
+export async function upsertExerciseGifOverride(
+  userId: string,
+  exerciseId: string,
+  gifUrl: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('exercise_gif_overrides')
+    .upsert({ user_id: userId, exercise_id: exerciseId, gif_url: gifUrl });
   if (error) throw error;
 }
 

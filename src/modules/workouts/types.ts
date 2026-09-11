@@ -8,7 +8,9 @@ export type Exercise = {
   id: string;
   name: string;
   muscleGroupId: string;
-  gif?: number;
+  // number = asset bundlado via require() (exercícios padrão);
+  // string = URL de um gif enviado pelo usuário (Supabase Storage).
+  gif?: number | string;
   isCustom?: boolean;
 };
 

@@ -1,7 +1,10 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
     Modal,
     ScrollView,
     Text,
@@ -10,10 +13,13 @@ import {
     View,
 } from 'react-native';
 
+import * as workoutService from '@/lib/workout-service';
 import { generateId } from '@/lib/uuid';
-import { DEFAULT_EXERCISES, MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
+import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { PRESET_TEMPLATES } from '@/modules/workouts/data/presets';
+import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
 import type { Exercise, WorkoutDay } from '@/modules/workouts/types';
+import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -45,13 +51,14 @@ export default function CreateWorkoutScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
+  const userId = useAuthStore((s) => s.user?.id);
   const addWorkout = useWorkoutStore((s) => s.addWorkout);
   const updateWorkout = useWorkoutStore((s) => s.updateWorkout);
   const workouts = useWorkoutStore((s) => s.workouts);
-  const customExercises = useWorkoutStore((s) => s.customExercises);
   const addCustomExercise = useWorkoutStore((s) => s.addCustomExercise);
+  const setExerciseGifOverride = useWorkoutStore((s) => s.setExerciseGifOverride);
 
-  const allExercises = [...DEFAULT_EXERCISES, ...customExercises];
+  const allExercises = useAllExercises();
 
   const existingWorkout = id ? workouts.find((w) => w.id === id) : undefined;
   const isEditing = !!existingWorkout;
@@ -71,6 +78,7 @@ export default function CreateWorkoutScreen() {
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseMuscleId, setNewExerciseMuscleId] = useState<string | null>(null);
   const [weekdayError, setWeekdayError] = useState(false);
+  const [uploadingGifId, setUploadingGifId] = useState<string | null>(null);
 
   const stepIndex = STEPS.indexOf(step);
 
@@ -225,6 +233,34 @@ export default function CreateWorkoutScreen() {
     setNewExerciseName('');
     setNewExerciseMuscleId(null);
     setShowCreateExercise(false);
+  }
+
+  async function handleAddGif(exerciseId: string) {
+    if (!userId) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permissão necessária', 'Precisamos de acesso à galeria para adicionar um gif.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    setUploadingGifId(exerciseId);
+    try {
+      const gifUrl = await workoutService.uploadExerciseGif(userId, exerciseId, asset.uri, asset.mimeType);
+      await workoutService.upsertExerciseGifOverride(userId, exerciseId, gifUrl);
+      setExerciseGifOverride(exerciseId, gifUrl);
+    } catch (err) {
+      Alert.alert('Erro', err instanceof Error ? err.message : 'Não foi possível adicionar o gif.');
+    } finally {
+      setUploadingGifId(null);
+    }
   }
 
   function closePickerModal() {
@@ -758,12 +794,25 @@ export default function CreateWorkoutScreen() {
                       borderColor: isSelected ? color : '#2A2A2A',
                     }}
                   >
-                    {ex.gif && (
+                    {ex.gif ? (
                       <Image
                         source={ex.gif}
                         style={{ width: '100%', height: 140 }}
                         contentFit="contain"
                       />
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => handleAddGif(ex.id)}
+                        activeOpacity={0.7}
+                        disabled={uploadingGifId === ex.id}
+                        className="h-12 items-center justify-center border-b border-border"
+                      >
+                        {uploadingGifId === ex.id ? (
+                          <ActivityIndicator color="#D62828" size="small" />
+                        ) : (
+                          <Text className="text-primary text-xs font-medium">+ Adicionar gif</Text>
+                        )}
+                      </TouchableOpacity>
                     )}
                     <View className="flex-row items-center justify-between p-3">
                       <View className="flex-row items-center gap-3 flex-1">

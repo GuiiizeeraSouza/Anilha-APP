@@ -4,7 +4,8 @@ import {
     requestNotificationPermissions,
     showWorkoutNotification,
 } from '@/lib/notification-service';
-import { DEFAULT_EXERCISES, MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
+import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
+import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
 import type { Exercise, MuscleGroup } from '@/modules/workouts/types';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
@@ -95,11 +96,10 @@ export default function ActiveWorkoutScreen() {
 
   const user = useAuthStore((s) => s.user);
   const workouts = useWorkoutStore((s) => s.workouts);
-  const customExercises = useWorkoutStore((s) => s.customExercises);
   const addCompletedSession = useWorkoutStore((s) => s.addCompletedSession);
   const startActiveSession = useWorkoutStore((s) => s.startActiveSession);
   const clearActiveSession = useWorkoutStore((s) => s.clearActiveSession);
-  const allExercises = [...DEFAULT_EXERCISES, ...customExercises];
+  const allExercises = useAllExercises();
 
   // Active workout/day (can be swapped via "Trocar treino")
   const [currentWorkoutId, setCurrentWorkoutId] = useState(workoutId);
@@ -120,6 +120,9 @@ export default function ActiveWorkoutScreen() {
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [stopMode, setStopMode] = useState<'finish' | 'abandon'>('finish');
   const [showChangePicker, setShowChangePicker] = useState(false);
+
+  const workout = workouts.find((w) => w.id === currentWorkoutId);
+  const day = workout?.days.find((d) => d.id === currentDayId);
 
   useEffect(() => {
     const snap = useWorkoutStore.getState().activeSession;
@@ -178,9 +181,6 @@ export default function ActiveWorkoutScreen() {
   useEffect(() => {
     setDoneIds([]);
   }, [currentWorkoutId, currentDayId]);
-
-  const workout = workouts.find((w) => w.id === currentWorkoutId);
-  const day = workout?.days.find((d) => d.id === currentDayId);
 
   if (!workout || !day) {
     return (

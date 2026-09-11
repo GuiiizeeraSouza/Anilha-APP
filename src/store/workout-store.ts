@@ -22,16 +22,21 @@ interface WorkoutState {
   customExercises: Exercise[];
   completedSessions: CompletedSession[];
   activeSession: ActiveSession | null;
+  // Gif enviado pelo usuário para exercícios que não têm um (padrão ou customizado),
+  // por exercise id. Ver useAllExercises, que já aplica isso sobre a lista de exercícios.
+  exerciseGifOverrides: Record<string, string>;
   // Bulk setters — used when loading from Supabase on login
   setWorkouts: (workouts: Workout[]) => void;
   setCustomExercises: (exercises: Exercise[]) => void;
   setCompletedSessions: (sessions: CompletedSession[]) => void;
+  setExerciseGifOverrides: (overrides: Record<string, string>) => void;
   resetStore: () => void;
   // Mutating actions — update local state and sync to Supabase in background
   addWorkout: (workout: Workout) => void;
   removeWorkout: (id: string) => void;
   updateWorkout: (workout: Workout) => void;
   addCustomExercise: (exercise: Exercise) => void;
+  setExerciseGifOverride: (exerciseId: string, gifUrl: string) => void;
   addCompletedSession: (session: CompletedSession) => void;
   startActiveSession: (workoutId: string, dayId: string) => void;
   clearActiveSession: () => void;
@@ -46,11 +51,20 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   customExercises: [],
   completedSessions: [],
   activeSession: null,
+  exerciseGifOverrides: {},
 
   setWorkouts: (workouts) => set({ workouts }),
   setCustomExercises: (exercises) => set({ customExercises: exercises }),
   setCompletedSessions: (sessions) => set({ completedSessions: sessions }),
-  resetStore: () => set({ workouts: [], customExercises: [], completedSessions: [], activeSession: null }),
+  setExerciseGifOverrides: (overrides) => set({ exerciseGifOverrides: overrides }),
+  resetStore: () =>
+    set({
+      workouts: [],
+      customExercises: [],
+      completedSessions: [],
+      activeSession: null,
+      exerciseGifOverrides: {},
+    }),
 
   addWorkout: (workout) => {
     set((state) => ({ workouts: [...state.workouts, workout] }));
@@ -75,6 +89,12 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
     set((state) => ({ customExercises: [...state.customExercises, exercise] }));
     const uid = getUserId();
     if (uid) workoutService.insertCustomExercise(uid, exercise).catch(console.error);
+  },
+
+  setExerciseGifOverride: (exerciseId, gifUrl) => {
+    set((state) => ({
+      exerciseGifOverrides: { ...state.exerciseGifOverrides, [exerciseId]: gifUrl },
+    }));
   },
 
   addCompletedSession: (session) => {

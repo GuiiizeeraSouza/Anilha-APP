@@ -5,9 +5,14 @@ interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  // true enquanto o usuário está no fluxo de "esqueci minha senha" (veio de um link de
+  // recuperação e já tem uma sessão válida, mas ainda não definiu a nova senha).
+  // Evita que o guard de navegação do _layout mande ele direto pra home antes disso.
+  isPasswordRecovery: boolean;
   setUser: (user: User | null) => void;
   setSession: (session: Session | null) => void;
   setLoading: (loading: boolean) => void;
+  setPasswordRecovery: (value: boolean) => void;
   logout: () => void;
 }
 
@@ -15,6 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   session: null,
   loading: true,
+  isPasswordRecovery: false,
   setUser: (user) => set({ user }),
   setSession: (session) => set((state) => {
     const incoming = session?.user ?? null;
@@ -34,5 +40,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     return { session, user: incoming };
   }),
   setLoading: (loading) => set({ loading }),
-  logout: () => set({ user: null, session: null, loading: false }),
+  setPasswordRecovery: (value) => set({ isPasswordRecovery: value }),
+  logout: () => set({ user: null, session: null, loading: false, isPasswordRecovery: false }),
 }));
