@@ -6,7 +6,7 @@ import {
 } from '@/lib/notification-service';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
-import type { Exercise, MuscleGroup } from '@/modules/workouts/types';
+import type { Exercise, MuscleGroup, WorkoutExercise } from '@/modules/workouts/types';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 import { Image } from 'expo-image';
@@ -30,13 +30,14 @@ function formatTime(secs: number): string {
 
 type ExerciseGifCardProps = {
   ex: Exercise;
+  config: WorkoutExercise;
   done: boolean;
   color: string;
   muscle: MuscleGroup | undefined;
   onToggle: () => void;
 };
 
-function ExerciseGifCard({ ex, done, color, muscle, onToggle }: ExerciseGifCardProps) {
+function ExerciseGifCard({ ex, config, done, color, muscle, onToggle }: ExerciseGifCardProps) {
   return (
     <TouchableOpacity
       onPress={onToggle}
@@ -65,11 +66,16 @@ function ExerciseGifCard({ ex, done, color, muscle, onToggle }: ExerciseGifCardP
           >
             {ex.name}{ex.isCustom ? ' ★' : ''}
           </Text>
-          {muscle && (
-            <Text className="text-xs mt-0.5" style={{ color: done ? '#404040' : color }}>
-              {muscle.name}
+          <View className="flex-row items-center gap-2 mt-0.5">
+            {muscle && (
+              <Text className="text-xs" style={{ color: done ? '#404040' : color }}>
+                {muscle.name}
+              </Text>
+            )}
+            <Text className="text-xs" style={{ color: done ? '#404040' : '#707070' }}>
+              {config.sets}x{config.reps}{config.weight > 0 ? ` · ${config.weight}kg` : ''}
             </Text>
-          )}
+          </View>
         </View>
       </View>
 
@@ -97,6 +103,7 @@ export default function ActiveWorkoutScreen() {
   const user = useAuthStore((s) => s.user);
   const workouts = useWorkoutStore((s) => s.workouts);
   const addCompletedSession = useWorkoutStore((s) => s.addCompletedSession);
+  const addExerciseTimeLog = useWorkoutStore((s) => s.addExerciseTimeLog);
   const startActiveSession = useWorkoutStore((s) => s.startActiveSession);
   const clearActiveSession = useWorkoutStore((s) => s.clearActiveSession);
   const allExercises = useAllExercises();
@@ -112,6 +119,10 @@ export default function ActiveWorkoutScreen() {
 
   // True when the user navigated back and is now resuming an existing session
   const isResumingRef = useRef<boolean>(false);
+
+  // Elapsed time (seconds) at the last exercise marked as done — used to log
+  // per-exercise duration for the evolution charts.
+  const lastCheckpointRef = useRef<number>(0);
 
   // Exercise checklist
   const [doneIds, setDoneIds] = useState<string[]>([]);
@@ -180,6 +191,7 @@ export default function ActiveWorkoutScreen() {
   // Reset checklist when workout changes
   useEffect(() => {
     setDoneIds([]);
+    lastCheckpointRef.current = elapsed;
   }, [currentWorkoutId, currentDayId]);
 
   if (!workout || !day) {
@@ -196,12 +208,12 @@ export default function ActiveWorkoutScreen() {
     );
   }
 
-  const exercises = day.exerciseIds.flatMap((id) => {
-    const ex = allExercises.find((e) => e.id === id);
-    return ex ? [ex] : [];
+  const exercises = day.exercises.flatMap((config) => {
+    const ex = allExercises.find((e) => e.id === config.exerciseId);
+    return ex ? [{ ex, config }] : [];
   });
 
-  const doneCount = exercises.filter((ex) => doneIds.includes(ex.id)).length;
+  const doneCount = exercises.filter(({ ex }) => doneIds.includes(ex.id)).length;
   const progress = exercises.length > 0 ? doneCount / exercises.length : 0;
 
   const muscleGroupNames = day.muscleGroupIds
@@ -211,7 +223,15 @@ export default function ActiveWorkoutScreen() {
   const allWorkoutDays = workouts.flatMap((w) => w.days.map((d) => ({ workout: w, day: d })));
 
   function toggleDone(exId: string) {
-    setDoneIds((prev) => (prev.includes(exId) ? prev.filter((id) => id !== exId) : [...prev, exId]));
+    setDoneIds((prev) => {
+      const alreadyDone = prev.includes(exId);
+      if (!alreadyDone && user) {
+        const seconds = Math.max(0, elapsed - lastCheckpointRef.current);
+        lastCheckpointRef.current = elapsed;
+        addExerciseTimeLog(exId, seconds);
+      }
+      return alreadyDone ? prev.filter((id) => id !== exId) : [...prev, exId];
+    });
   }
 
   function handleAbandon() {
@@ -306,7 +326,7 @@ export default function ActiveWorkoutScreen() {
             Nenhum exercício neste treino.
           </Text>
         ) : (
-          exercises.map((ex) => {
+          exercises.map(({ ex, config }) => {
             const done = doneIds.includes(ex.id);
             const muscle = MUSCLE_GROUPS.find((m) => m.id === ex.muscleGroupId);
             const color = muscle?.color ?? '#D62828';
@@ -314,6 +334,7 @@ export default function ActiveWorkoutScreen() {
               <ExerciseGifCard
                 key={ex.id}
                 ex={ex}
+                config={config}
                 done={done}
                 color={color}
                 muscle={muscle}

@@ -14,11 +14,19 @@ export type Exercise = {
   isCustom?: boolean;
 };
 
+export type WorkoutExercise = {
+  exerciseId: string;
+  sets: number;
+  reps: number;
+  // kg, peso atual/alvo do exercício nesse dia de treino — editável na Home.
+  weight: number;
+};
+
 export type WorkoutDay = {
   id: string;
   label: string;
   muscleGroupIds: string[];
-  exerciseIds: string[];
+  exercises: WorkoutExercise[];
   weekDays: string[];
 };
 
@@ -27,6 +35,7 @@ export type Workout = {
   name: string;
   days: WorkoutDay[];
   createdAt: string;
+  isPrimary?: boolean;
 };
 
 export type PresetTemplate = {

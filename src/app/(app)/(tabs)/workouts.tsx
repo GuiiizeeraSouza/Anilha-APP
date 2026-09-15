@@ -4,10 +4,11 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { useWorkoutStore } from '@/store/workout-store';
 
-export default function ManageWorkoutsScreen() {
+export default function WorkoutsScreen() {
   const router = useRouter();
   const workouts = useWorkoutStore((s) => s.workouts);
   const removeWorkout = useWorkoutStore((s) => s.removeWorkout);
+  const setPrimaryWorkout = useWorkoutStore((s) => s.setPrimaryWorkout);
 
   function getMuscleGroupName(id: string) {
     return MUSCLE_GROUPS.find((m) => m.id === id)?.name ?? id;
@@ -25,13 +26,6 @@ export default function ManageWorkoutsScreen() {
   return (
     <View className="flex-1 bg-background">
       <View className="flex-row items-center px-5 pt-14 pb-4 border-b border-border">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          className="w-8 h-8 items-center justify-center mr-3"
-        >
-          <Text className="text-text text-xl">←</Text>
-        </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-text text-lg font-bold">Meus treinos</Text>
           <Text className="text-secondary-text text-xs">
@@ -79,7 +73,14 @@ export default function ManageWorkoutsScreen() {
               {/* Workout header */}
               <View className="px-4 pt-4 pb-3 border-b border-border flex-row items-start justify-between gap-3">
                 <View className="flex-1">
-                  <Text className="text-text font-bold text-base">{workout.name}</Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-text font-bold text-base">{workout.name}</Text>
+                    {workout.isPrimary && (
+                      <View className="bg-primary/20 rounded-md px-1.5 py-0.5" style={{ backgroundColor: '#D6282822' }}>
+                        <Text className="text-primary text-xs font-bold">★ Principal</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text className="text-secondary-text text-xs mt-0.5">
                     {workout.days.length} dia{workout.days.length !== 1 ? 's' : ''} de treino
                   </Text>
@@ -104,6 +105,16 @@ export default function ManageWorkoutsScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {!workout.isPrimary && (
+                <TouchableOpacity
+                  onPress={() => setPrimaryWorkout(workout.id)}
+                  activeOpacity={0.7}
+                  className="px-4 py-2.5 border-b border-border"
+                >
+                  <Text className="text-primary text-xs font-semibold">★ Marcar como treino principal</Text>
+                </TouchableOpacity>
+              )}
 
               {/* Days list */}
               <View className="px-4 py-3 gap-3">

@@ -17,7 +17,7 @@ export function useResetPassword() {
       setError(null);
       await updatePassword(data.password);
       setPasswordRecovery(false);
-      router.replace('/(app)/home');
+      router.replace('/home');
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {

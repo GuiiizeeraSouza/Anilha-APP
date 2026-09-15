@@ -33,7 +33,7 @@ import { Container } from '@/shared/components/container';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
-export default function RankingScreen() {
+export default function SocialScreen() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const completedSessions = useWorkoutStore((s) => s.completedSessions);
@@ -239,19 +239,6 @@ export default function RankingScreen() {
           backgroundColor: '#121212',
         }}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          style={{
-            width: 38, height: 38, borderRadius: 19,
-            backgroundColor: '#1E1E1E',
-            borderWidth: 1, borderColor: '#2A2A2A',
-            alignItems: 'center', justifyContent: 'center',
-            marginRight: 12,
-          }}
-        >
-          <Text style={{ color: '#D62828', fontSize: 20, fontWeight: 'bold' }}>‹</Text>
-        </TouchableOpacity>
         <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', flex: 1 }}>
           🏆 Ranking & Social
         </Text>

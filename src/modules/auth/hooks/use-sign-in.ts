@@ -17,7 +17,7 @@ export function useSignIn() {
       setError(null);
       const { session } = await signIn(data);
       setSession(session);
-      router.replace('/(app)/home');
+      router.replace('/home');
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {

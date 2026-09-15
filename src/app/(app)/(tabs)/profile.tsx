@@ -1,19 +1,31 @@
 import { File } from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { Header } from 'expo-router/react-navigation';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
+import { signOut } from '@/modules/auth/services/auth-service';
+
 import { supabase } from '@/lib/supabase';
+import { Button } from '@/shared/components/button';
 import { Container } from '@/shared/components/container';
 import { useAuthStore } from '@/store/auth-store';
-import { Header } from 'expo-router/react-navigation';
 
 export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const logout = useAuthStore((state) => state.logout);
+  const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null);
+
+  async function handleSignOut() {
+    await signOut();
+    logout();
+    router.replace('/(auth)/login');
+  }
 
   const name = (user?.user_metadata?.name as string | undefined) ?? 'Usuário';
   const email = user?.email ?? '—';
@@ -163,6 +175,10 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        <View className="mt-6">
+          <Button title="Sair" onPress={handleSignOut} variant="ghost" />
         </View>
       </ScrollView>
     </Container>

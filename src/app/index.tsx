@@ -6,7 +6,7 @@ export default function Index() {
   const { session, loading } = useAuthStore();
 
   if (loading) return <Loading fullScreen />;
-  if (session) return <Redirect href="/(app)/home" />;
+  if (session) return <Redirect href="/home" />;
   return <Redirect href="/(auth)/login" />;
 }
 

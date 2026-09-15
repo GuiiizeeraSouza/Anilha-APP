@@ -32,7 +32,7 @@ export function useSignUp() {
       }
 
       setSession(session);
-      router.replace('/(app)/home');
+      router.replace('/home');
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {

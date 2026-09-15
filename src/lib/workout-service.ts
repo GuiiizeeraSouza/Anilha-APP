@@ -20,6 +20,7 @@ export async function fetchWorkouts(userId: string): Promise<Workout[]> {
     id: w.id as string,
     name: w.name as string,
     createdAt: w.created_at as string,
+    isPrimary: (w.is_primary as boolean | null) ?? false,
     days: ((w.workout_days ?? []) as any[])
       .sort((a, b) => (a.sort_order as number) - (b.sort_order as number))
       .map((d) => ({
@@ -27,7 +28,12 @@ export async function fetchWorkouts(userId: string): Promise<Workout[]> {
         label: d.label as string,
         weekDays: (d.week_days ?? []) as string[],
         muscleGroupIds: (d.muscle_group_ids ?? []) as string[],
-        exerciseIds: (d.exercise_ids ?? []) as string[],
+        exercises: ((d.exercises ?? []) as any[]).map((e) => ({
+          exerciseId: e.exercise_id as string,
+          sets: e.sets as number,
+          reps: e.reps as number,
+          weight: e.weight as number,
+        })),
       })),
   }));
 }
@@ -87,6 +93,7 @@ export async function upsertWorkout(userId: string, workout: Workout): Promise<v
     user_id: userId,
     name: workout.name,
     created_at: workout.createdAt,
+    is_primary: workout.isPrimary ?? false,
   });
   if (workoutError) throw workoutError;
 
@@ -101,7 +108,12 @@ export async function upsertWorkout(userId: string, workout: Workout): Promise<v
         label: d.label,
         week_days: d.weekDays,
         muscle_group_ids: d.muscleGroupIds,
-        exercise_ids: d.exerciseIds,
+        exercises: d.exercises.map((e) => ({
+          exercise_id: e.exerciseId,
+          sets: e.sets,
+          reps: e.reps,
+          weight: e.weight,
+        })),
         sort_order: i,
       }))
     );
@@ -112,6 +124,21 @@ export async function upsertWorkout(userId: string, workout: Workout): Promise<v
 export async function deleteWorkout(workoutId: string): Promise<void> {
   const { error } = await supabase.from('workouts').delete().eq('id', workoutId);
   if (error) throw error;
+}
+
+/** Marca um treino como principal (fallback de "treino do dia" quando hoje não tem nada agendado); desmarca os demais. */
+export async function setPrimaryWorkout(userId: string, workoutId: string): Promise<void> {
+  const { error: clearError } = await supabase
+    .from('workouts')
+    .update({ is_primary: false })
+    .eq('user_id', userId);
+  if (clearError) throw clearError;
+
+  const { error: setError } = await supabase
+    .from('workouts')
+    .update({ is_primary: true })
+    .eq('id', workoutId);
+  if (setError) throw setError;
 }
 
 export async function insertCustomExercise(userId: string, exercise: Exercise): Promise<void> {
@@ -168,4 +195,68 @@ export async function insertCompletedSession(
     duration_seconds: session.durationSeconds,
   });
   if (error) throw error;
+}
+
+// ─── Evolução: histórico de peso e tempo por exercício ──────────────────────
+
+export interface WeightLog {
+  exerciseId: string;
+  weight: number;
+  loggedAt: string;
+}
+
+export interface ExerciseTimeLog {
+  exerciseId: string;
+  seconds: number;
+  loggedAt: string;
+}
+
+export async function insertWeightLog(
+  userId: string,
+  exerciseId: string,
+  weight: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from('weight_logs')
+    .insert({ user_id: userId, exercise_id: exerciseId, weight });
+  if (error) throw error;
+}
+
+export async function fetchWeightLogs(userId: string): Promise<WeightLog[]> {
+  const { data, error } = await supabase
+    .from('weight_logs')
+    .select('exercise_id, weight, logged_at')
+    .eq('user_id', userId)
+    .order('logged_at');
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    exerciseId: r.exercise_id as string,
+    weight: r.weight as number,
+    loggedAt: r.logged_at as string,
+  }));
+}
+
+export async function insertExerciseTimeLog(
+  userId: string,
+  exerciseId: string,
+  seconds: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from('exercise_time_logs')
+    .insert({ user_id: userId, exercise_id: exerciseId, seconds });
+  if (error) throw error;
+}
+
+export async function fetchExerciseTimeLogs(userId: string): Promise<ExerciseTimeLog[]> {
+  const { data, error } = await supabase
+    .from('exercise_time_logs')
+    .select('exercise_id, seconds, logged_at')
+    .eq('user_id', userId)
+    .order('logged_at');
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    exerciseId: r.exercise_id as string,
+    seconds: r.seconds as number,
+    loggedAt: r.logged_at as string,
+  }));
 }

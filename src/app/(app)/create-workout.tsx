@@ -18,7 +18,7 @@ import { generateId } from '@/lib/uuid';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { PRESET_TEMPLATES } from '@/modules/workouts/data/presets';
 import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
-import type { Exercise, WorkoutDay } from '@/modules/workouts/types';
+import type { Exercise, WorkoutDay, WorkoutExercise } from '@/modules/workouts/types';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
@@ -36,6 +36,9 @@ const WEEK_DAYS = [
 
 const DAY_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
+const DEFAULT_SETS = 3;
+const DEFAULT_REPS = 12;
+
 type Step = 'template' | 'configure' | 'review';
 const STEPS: Step[] = ['template', 'configure', 'review'];
 
@@ -44,6 +47,40 @@ const STEP_TITLES: Record<Step, string> = {
   configure: 'Configure os treinos',
   review: 'Revisão',
 };
+
+// ─── Stepper ────────────────────────────────────────────────────────────────
+
+type StepperProps = {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+};
+
+function Stepper({ label, value, onChange }: StepperProps) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <TouchableOpacity
+        onPress={() => onChange(value - 1)}
+        activeOpacity={0.7}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        className="w-6 h-6 rounded-full bg-card items-center justify-center border border-border"
+      >
+        <Text className="text-text text-xs font-bold">-</Text>
+      </TouchableOpacity>
+      <Text className="text-text text-xs font-semibold" style={{ minWidth: 52, textAlign: 'center' }}>
+        {value} {label}
+      </Text>
+      <TouchableOpacity
+        onPress={() => onChange(value + 1)}
+        activeOpacity={0.7}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        className="w-6 h-6 rounded-full bg-card items-center justify-center border border-border"
+      >
+        <Text className="text-text text-xs font-bold">+</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // ─── Main Screen ───────────────────────────────────────────────────────────
 
@@ -108,11 +145,15 @@ export default function CreateWorkoutScreen() {
       .join(', ');
   }
 
-  function getDefaultExercisesForMuscles(muscleIds: string[]): string[] {
+  function newWorkoutExercise(exerciseId: string): WorkoutExercise {
+    return { exerciseId, sets: DEFAULT_SETS, reps: DEFAULT_REPS, weight: 0 };
+  }
+
+  function getDefaultExercisesForMuscles(muscleIds: string[]): WorkoutExercise[] {
     return allExercises
       .filter((e) => muscleIds.includes(e.muscleGroupId))
       .slice(0, 2 * muscleIds.length)
-      .map((e) => e.id);
+      .map((e) => newWorkoutExercise(e.id));
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────
@@ -125,7 +166,7 @@ export default function CreateWorkoutScreen() {
           id: generateId(),
           label: 'A',
           muscleGroupIds: [],
-          exerciseIds: [],
+          exercises: [],
           weekDays: [],
         },
       ]);
@@ -139,7 +180,7 @@ export default function CreateWorkoutScreen() {
           id: generateId(),
           label: d.label,
           muscleGroupIds: d.muscleGroupIds,
-          exerciseIds: getDefaultExercisesForMuscles(d.muscleGroupIds),
+          exercises: getDefaultExercisesForMuscles(d.muscleGroupIds),
           weekDays: [WEEK_ORDER[i] ?? 'seg'],
         }))
       );
@@ -157,18 +198,18 @@ export default function CreateWorkoutScreen() {
         const newMuscles = has
           ? d.muscleGroupIds.filter((m) => m !== muscleId)
           : [...d.muscleGroupIds, muscleId];
-        const filtered = d.exerciseIds.filter((eId) => {
-          const ex = allExercises.find((e) => e.id === eId);
+        const filtered = d.exercises.filter((cfg) => {
+          const ex = allExercises.find((e) => e.id === cfg.exerciseId);
           return ex && newMuscles.includes(ex.muscleGroupId);
         });
         if (!has) {
           const added = allExercises
-            .filter((e) => e.muscleGroupId === muscleId && !filtered.includes(e.id))
+            .filter((e) => e.muscleGroupId === muscleId && !filtered.some((cfg) => cfg.exerciseId === e.id))
             .slice(0, 2)
-            .map((e) => e.id);
-          return { ...d, muscleGroupIds: newMuscles, exerciseIds: [...filtered, ...added] };
+            .map((e) => newWorkoutExercise(e.id));
+          return { ...d, muscleGroupIds: newMuscles, exercises: [...filtered, ...added] };
         }
-        return { ...d, muscleGroupIds: newMuscles, exerciseIds: filtered };
+        return { ...d, muscleGroupIds: newMuscles, exercises: filtered };
       })
     );
   }
@@ -177,12 +218,28 @@ export default function CreateWorkoutScreen() {
     setDays((prev) =>
       prev.map((d) => {
         if (d.id !== dayId) return d;
-        const has = d.exerciseIds.includes(exerciseId);
+        const has = d.exercises.some((cfg) => cfg.exerciseId === exerciseId);
         return {
           ...d,
-          exerciseIds: has
-            ? d.exerciseIds.filter((e) => e !== exerciseId)
-            : [...d.exerciseIds, exerciseId],
+          exercises: has
+            ? d.exercises.filter((cfg) => cfg.exerciseId !== exerciseId)
+            : [...d.exercises, newWorkoutExercise(exerciseId)],
+        };
+      })
+    );
+  }
+
+  function updateExerciseConfig(dayId: string, exerciseId: string, patch: Partial<Pick<WorkoutExercise, 'sets' | 'reps'>>) {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        return {
+          ...d,
+          exercises: d.exercises.map((cfg) =>
+            cfg.exerciseId === exerciseId
+              ? { ...cfg, ...patch, sets: Math.max(1, patch.sets ?? cfg.sets), reps: Math.max(1, patch.reps ?? cfg.reps) }
+              : cfg
+          ),
         };
       })
     );
@@ -209,7 +266,7 @@ export default function CreateWorkoutScreen() {
         id: generateId(),
         label: nextLabel,
         muscleGroupIds: [],
-        exerciseIds: [],
+        exercises: [],
         weekDays: [],
       },
     ]);
@@ -484,8 +541,8 @@ export default function CreateWorkoutScreen() {
                         : 'Selecione grupos musculares'}
                     </Text>
                     <Text className="text-secondary-text text-xs mt-0.5">
-                      {day.exerciseIds.length > 0
-                        ? `${day.exerciseIds.length} exercício${day.exerciseIds.length > 1 ? 's' : ''}`
+                      {day.exercises.length > 0
+                        ? `${day.exercises.length} exercício${day.exercises.length > 1 ? 's' : ''}`
                         : 'Nenhum exercício'}
                     </Text>
                   </View>
@@ -546,7 +603,7 @@ export default function CreateWorkoutScreen() {
                         </Text>
                         <View className="flex-row flex-wrap gap-2">
                           {dayExercises.map((ex) => {
-                            const selected = day.exerciseIds.includes(ex.id);
+                            const selected = day.exercises.some((cfg) => cfg.exerciseId === ex.id);
                             const muscle = getMuscleGroup(ex.muscleGroupId);
                             const color = muscle?.color ?? '#D62828';
                             return (
@@ -568,6 +625,41 @@ export default function CreateWorkoutScreen() {
                                   {ex.isCustom ? ' ★' : ''}
                                 </Text>
                               </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </>
+                    )}
+
+                    {/* Séries e repetições dos exercícios selecionados */}
+                    {day.exercises.length > 0 && (
+                      <>
+                        <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider mt-4 mb-2">
+                          Séries e repetições
+                        </Text>
+                        <View className="gap-2">
+                          {day.exercises.map((cfg) => {
+                            const ex = getExercise(cfg.exerciseId);
+                            if (!ex) return null;
+                            return (
+                              <View
+                                key={cfg.exerciseId}
+                                className="flex-row items-center gap-2 bg-background rounded-xl px-3 py-2"
+                              >
+                                <Text className="text-text text-xs flex-1" numberOfLines={1}>
+                                  {ex.name}
+                                </Text>
+                                <Stepper
+                                  label="séries"
+                                  value={cfg.sets}
+                                  onChange={(v) => updateExerciseConfig(day.id, cfg.exerciseId, { sets: v })}
+                                />
+                                <Stepper
+                                  label="reps"
+                                  value={cfg.reps}
+                                  onChange={(v) => updateExerciseConfig(day.id, cfg.exerciseId, { reps: v })}
+                                />
+                              </View>
                             );
                           })}
                         </View>
@@ -686,21 +778,24 @@ export default function CreateWorkoutScreen() {
                 </View>
               </View>
 
-              {day.exerciseIds.length > 0 && (
+              {day.exercises.length > 0 && (
                 <View className="gap-1.5 pl-11">
-                  {day.exerciseIds.map((exId) => {
-                    const ex = getExercise(exId);
+                  {day.exercises.map((cfg) => {
+                    const ex = getExercise(cfg.exerciseId);
                     if (!ex) return null;
                     const muscle = getMuscleGroup(ex.muscleGroupId);
                     return (
-                      <View key={exId} className="flex-row items-center gap-2">
+                      <View key={cfg.exerciseId} className="flex-row items-center gap-2">
                         <View
                           className="w-1.5 h-1.5 rounded-full"
                           style={{ backgroundColor: muscle?.color ?? '#D62828' }}
                         />
-                        <Text className="text-secondary-text text-sm">
+                        <Text className="text-secondary-text text-sm flex-1">
                           {ex.name}
                           {ex.isCustom ? ' ★' : ''}
+                        </Text>
+                        <Text className="text-secondary-text text-xs">
+                          {cfg.sets}x{cfg.reps}
                         </Text>
                       </View>
                     );
@@ -780,7 +875,7 @@ export default function CreateWorkoutScreen() {
               )}
 
               {filteredExercises.map((ex) => {
-                const isSelected = pickerDay?.exerciseIds.includes(ex.id) ?? false;
+                const isSelected = pickerDay?.exercises.some((cfg) => cfg.exerciseId === ex.id) ?? false;
                 const muscle = getMuscleGroup(ex.muscleGroupId);
                 const color = muscle?.color ?? '#D62828';
                 return (

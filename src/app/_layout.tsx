@@ -32,6 +32,8 @@ export default function RootLayout() {
   const setCustomExercises = useWorkoutStore((s) => s.setCustomExercises);
   const setCompletedSessions = useWorkoutStore((s) => s.setCompletedSessions);
   const setExerciseGifOverrides = useWorkoutStore((s) => s.setExerciseGifOverrides);
+  const setWeightLogs = useWorkoutStore((s) => s.setWeightLogs);
+  const setExerciseTimeLogs = useWorkoutStore((s) => s.setExerciseTimeLogs);
   const resetStore = useWorkoutStore((s) => s.resetStore);
 
   // Inicializa a sessão e registra listener de mudança de autenticação
@@ -99,12 +101,16 @@ export default function RootLayout() {
       workoutService.fetchCustomExercises(userId),
       workoutService.fetchCompletedSessions(userId),
       workoutService.fetchExerciseGifOverrides(userId),
+      workoutService.fetchWeightLogs(userId),
+      workoutService.fetchExerciseTimeLogs(userId),
     ])
-      .then(([workouts, exercises, sessions, gifOverrides]) => {
+      .then(([workouts, exercises, sessions, gifOverrides, weightLogs, exerciseTimeLogs]) => {
         setWorkouts(workouts);
         setCustomExercises(exercises);
         setCompletedSessions(sessions);
         setExerciseGifOverrides(gifOverrides);
+        setWeightLogs(weightLogs);
+        setExerciseTimeLogs(exerciseTimeLogs);
       })
       .catch(console.error);
   }, [userId]);
@@ -125,7 +131,7 @@ export default function RootLayout() {
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      router.replace('/(app)/home');
+      router.replace('/home');
     }
   }, [session, loading, segments, router, isPasswordRecovery]);
 
