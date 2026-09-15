@@ -8,3 +8,16 @@
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
+
+/*
+ * React Native Web flex children default to `min-height: auto`, so a nested
+ * flex chain (Stack screen > tab layout > ScrollView) never shrinks below
+ * its content's natural size — the scroll area just grows the whole page
+ * instead of scrolling, which also pushes anything below it (like a bottom
+ * tab bar) off-screen. Force min-height: 0 through the whole #root tree so
+ * flex:1 containers actually get clipped to their allotted space.
+ */
+#root,
+#root * {
+  min-height: 0;
+}
