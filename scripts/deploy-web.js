@@ -10,6 +10,7 @@ const outputDir = path.join(root, '.vercel', 'output');
 const staticDir = path.join(outputDir, 'static');
 
 run('npx expo export --platform web');
+run('node ./scripts/inject-web-meta.js');
 
 // Deploy via the Vercel Build Output API (--prebuilt) instead of `vercel deploy dist`.
 // Letting Vercel re-build a plain static export through its zero-config detection
