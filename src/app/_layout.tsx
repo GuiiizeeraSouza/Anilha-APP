@@ -35,6 +35,7 @@ export default function RootLayout() {
   const setWeightLogs = useWorkoutStore((s) => s.setWeightLogs);
   const setExerciseTimeLogs = useWorkoutStore((s) => s.setExerciseTimeLogs);
   const resetStore = useWorkoutStore((s) => s.resetStore);
+  const hasHydrated = useWorkoutStore((s) => s.hasHydrated);
 
   // Inicializa a sessão e registra listener de mudança de autenticação
   useEffect(() => {
@@ -117,7 +118,7 @@ export default function RootLayout() {
 
   // Redireciona conforme estado de autenticação
   useEffect(() => {
-    if (loading) return;
+    if (loading || !hasHydrated) return;
 
     SplashScreen.hideAsync().catch(() => {});
 
@@ -133,9 +134,13 @@ export default function RootLayout() {
     } else if (session && inAuthGroup) {
       router.replace('/home');
     }
-  }, [session, loading, segments, router, isPasswordRecovery]);
+  }, [session, loading, hasHydrated, segments, router, isPasswordRecovery]);
 
-  if (loading) return null;
+  // Espera o workout-store terminar de ler o AsyncStorage antes de montar
+  // qualquer tela — telas como active-workout.tsx decidem "retomar ou
+  // iniciar sessão" a partir de activeSession assim que montam, e um mount
+  // antes da hidratação terminar veria o valor ainda como null.
+  if (loading || !hasHydrated) return null;
 
   return (
     <>

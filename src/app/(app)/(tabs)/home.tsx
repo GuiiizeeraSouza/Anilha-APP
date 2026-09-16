@@ -30,12 +30,17 @@ export default function HomeScreen() {
   const workouts = useWorkoutStore((s) => s.workouts);
   const completedSessions = useWorkoutStore((s) => s.completedSessions);
   const activeSession = useWorkoutStore((s) => s.activeSession);
+  const doneExerciseIds = useWorkoutStore((s) => s.activeSessionDoneExerciseIds);
+  const activeExerciseTimer = useWorkoutStore((s) => s.activeExerciseTimer);
   const updateWorkout = useWorkoutStore((s) => s.updateWorkout);
   const startActiveSession = useWorkoutStore((s) => s.startActiveSession);
   const clearActiveSession = useWorkoutStore((s) => s.clearActiveSession);
   const addCompletedSession = useWorkoutStore((s) => s.addCompletedSession);
   const addWeightLog = useWorkoutStore((s) => s.addWeightLog);
   const addExerciseTimeLog = useWorkoutStore((s) => s.addExerciseTimeLog);
+  const markExerciseDone = useWorkoutStore((s) => s.markExerciseDone);
+  const reopenExercise = useWorkoutStore((s) => s.reopenExercise);
+  const setActiveExerciseTimer = useWorkoutStore((s) => s.setActiveExerciseTimer);
   const allExercises = useAllExercises();
 
   // ── Timer da sessão (cabeçalho) ─────────────────────────────────────────
@@ -109,7 +114,6 @@ export default function HomeScreen() {
     });
     clearActiveSession();
     setSelectedExerciseId(null);
-    setDoneExerciseIds([]);
   }
 
   // Atualiza a notificação persistente a cada minuto de treino.
@@ -129,11 +133,11 @@ export default function HomeScreen() {
     : [];
 
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
-  const [doneExerciseIds, setDoneExerciseIds] = useState<string[]>([]);
 
-  // Reseta a lista de concluídos quando o dia de treino exibido muda.
+  // Reseta a seleção de destaque quando o dia de treino exibido muda.
+  // A lista de concluídos (activeSessionDoneExerciseIds) já vive no store,
+  // atrelada ao ciclo de vida da sessão ativa (ver startActiveSession/clearActiveSession).
   useEffect(() => {
-    setDoneExerciseIds([]);
     setSelectedExerciseId(null);
   }, [displayEntry?.day.id]);
 
@@ -146,6 +150,13 @@ export default function HomeScreen() {
       : pendingItems[0]?.ex.id ?? null;
   const heroItem = pendingItems.find((d) => d.ex.id === heroId) ?? null;
   const otherItems = pendingItems.filter((d) => d.ex.id !== heroId);
+
+  // Anima a troca do card principal sempre que outro exercício assume o destaque.
+  const [heroAnim] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    heroAnim.setValue(0);
+    Animated.timing(heroAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
+  }, [heroId]);
 
   // Peso — editável direto no card principal
   const [weightInput, setWeightInput] = useState('');
@@ -181,20 +192,23 @@ export default function HomeScreen() {
     addWeightLog(heroItem.ex.id, newWeight);
   }
 
-  // Cronômetro do exercício selecionado
-  const [exerciseTimerStartedAt, setExerciseTimerStartedAt] = useState<number | null>(null);
+  // Cronômetro do exercício selecionado — o timestamp de início vive no store
+  // (activeExerciseTimer) para sobreviver a reloads do app; só o "tick" exibido
+  // em tela é estado local.
+  const exerciseTimerStartedAt =
+    activeExerciseTimer && activeExerciseTimer.exerciseId === heroItem?.ex.id
+      ? activeExerciseTimer.startedAt
+      : null;
   const [exerciseElapsed, setExerciseElapsed] = useState(0);
 
   useEffect(() => {
-    setExerciseTimerStartedAt(null);
-    setExerciseElapsed(0);
-  }, [heroItem?.ex.id]);
-
-  useEffect(() => {
-    if (!exerciseTimerStartedAt) return;
-    const startedAt = exerciseTimerStartedAt;
+    if (!exerciseTimerStartedAt) {
+      setExerciseElapsed(0);
+      return;
+    }
+    setExerciseElapsed(Math.floor((Date.now() - exerciseTimerStartedAt) / 1000));
     const id = setInterval(() => {
-      setExerciseElapsed(Math.floor((Date.now() - startedAt) / 1000));
+      setExerciseElapsed(Math.floor((Date.now() - exerciseTimerStartedAt) / 1000));
     }, 1000);
     return () => clearInterval(id);
   }, [exerciseTimerStartedAt]);
@@ -202,20 +216,18 @@ export default function HomeScreen() {
   function handleExerciseStartOrFinish() {
     if (!heroItem || !user || !isSessionActive) return;
     if (!exerciseTimerStartedAt) {
-      setExerciseTimerStartedAt(Date.now());
+      setActiveExerciseTimer({ exerciseId: heroItem.ex.id, startedAt: Date.now() });
       return;
     }
     addExerciseTimeLog(heroItem.ex.id, exerciseElapsed);
-    setExerciseTimerStartedAt(null);
-    setExerciseElapsed(0);
-    setDoneExerciseIds((prev) => [...prev, heroItem.ex.id]);
+    markExerciseDone(heroItem.ex.id);
     const idx = pendingItems.findIndex((d) => d.ex.id === heroItem.ex.id);
     const next = pendingItems[idx + 1];
     setSelectedExerciseId(next ? next.ex.id : null);
   }
 
   function handleReopenExercise(exerciseId: string) {
-    setDoneExerciseIds((prev) => prev.filter((id) => id !== exerciseId));
+    reopenExercise(exerciseId);
     setSelectedExerciseId(exerciseId);
   }
 
@@ -313,98 +325,108 @@ export default function HomeScreen() {
 
             {/* Card do exercício selecionado */}
             {heroItem && (
-              <View className="bg-card rounded-2xl border border-border overflow-hidden mb-3">
-                {heroItem.ex.gif && (
-                  <Image
-                    source={heroItem.ex.gif}
-                    style={{ width: '100%', height: 220 }}
-                    contentFit="contain"
-                  />
-                )}
-                <View className="p-4">
-                  <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider mb-1">
-                    Exercício selecionado
-                  </Text>
-                  <Text className="text-text text-lg font-bold mb-1">{heroItem.ex.name}</Text>
-                  <Text className="text-primary text-sm font-semibold mb-4">
-                    {heroItem.cfg.sets}x{heroItem.cfg.reps}
-                    {heroItem.cfg.weight > 0 ? ` · ${heroItem.cfg.weight}kg` : ''}
-                  </Text>
-
-                  {/* Peso — editável direto no card */}
-                  <View className="flex-row items-center gap-2 mb-2">
-                    <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider">
-                      Peso utilizado (kg)
+              <Animated.View
+                style={{
+                  opacity: heroAnim,
+                  transform: [
+                    { translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+                    { scale: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) },
+                  ],
+                }}
+              >
+                <View className="bg-card rounded-2xl border border-border overflow-hidden mb-3">
+                  {heroItem.ex.gif && (
+                    <Image
+                      source={heroItem.ex.gif}
+                      style={{ width: '100%', height: 220 }}
+                      contentFit="contain"
+                    />
+                  )}
+                  <View className="p-4">
+                    <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider mb-1">
+                      Exercício selecionado
                     </Text>
-                    <Animated.View
-                      pointerEvents="none"
+                    <Text className="text-text text-lg font-bold mb-1">{heroItem.ex.name}</Text>
+                    <Text className="text-primary text-sm font-semibold mb-4">
+                      {heroItem.cfg.sets}x{heroItem.cfg.reps}
+                      {heroItem.cfg.weight > 0 ? ` · ${heroItem.cfg.weight}kg` : ''}
+                    </Text>
+
+                    {/* Peso — editável direto no card */}
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider">
+                        Peso utilizado (kg)
+                      </Text>
+                      <Animated.View
+                        pointerEvents="none"
+                        style={{
+                          opacity: weightSavedPulse,
+                          transform: [
+                            {
+                              translateY: weightSavedPulse.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [4, 0],
+                              }),
+                            },
+                          ],
+                          backgroundColor: '#4CAF50',
+                          borderRadius: 20,
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>✓ Salvo</Text>
+                      </Animated.View>
+                    </View>
+                    <View className="flex-row gap-2 mb-4">
+                      <TextInput
+                        value={weightInput}
+                        onChangeText={setWeightInput}
+                        keyboardType="decimal-pad"
+                        placeholder="0"
+                        placeholderTextColor="#505050"
+                        className="flex-1 bg-background rounded-xl px-3.5 text-text border border-border"
+                        style={{ height: 44, fontSize: 15 }}
+                      />
+                      <TouchableOpacity
+                        onPress={handleSaveWeight}
+                        activeOpacity={0.85}
+                        className="bg-primary rounded-xl px-5 items-center justify-center"
+                      >
+                        <Text className="text-white font-bold text-sm">Salvar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Iniciar / concluir exercício */}
+                    <TouchableOpacity
+                      onPress={handleExerciseStartOrFinish}
+                      disabled={!isSessionActive}
+                      activeOpacity={0.85}
+                      className="rounded-xl items-center justify-center py-3.5"
                       style={{
-                        opacity: weightSavedPulse,
-                        transform: [
-                          {
-                            translateY: weightSavedPulse.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [4, 0],
-                            }),
-                          },
-                        ],
-                        backgroundColor: '#4CAF50',
-                        borderRadius: 20,
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
+                        backgroundColor: exerciseTimerStartedAt ? '#1E1E1E' : '#D62828',
+                        borderWidth: exerciseTimerStartedAt ? 1 : 0,
+                        borderColor: '#D62828',
+                        opacity: isSessionActive ? 1 : 0.4,
                       }}
                     >
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>✓ Salvo</Text>
-                    </Animated.View>
-                  </View>
-                  <View className="flex-row gap-2 mb-4">
-                    <TextInput
-                      value={weightInput}
-                      onChangeText={setWeightInput}
-                      keyboardType="decimal-pad"
-                      placeholder="0"
-                      placeholderTextColor="#505050"
-                      className="flex-1 bg-background rounded-xl px-3.5 text-text border border-border"
-                      style={{ height: 44, fontSize: 15 }}
-                    />
-                    <TouchableOpacity
-                      onPress={handleSaveWeight}
-                      activeOpacity={0.85}
-                      className="bg-primary rounded-xl px-5 items-center justify-center"
-                    >
-                      <Text className="text-white font-bold text-sm">Salvar</Text>
+                      <Text
+                        className="font-bold text-sm"
+                        style={{ color: exerciseTimerStartedAt ? '#D62828' : '#fff' }}
+                      >
+                        {exerciseTimerStartedAt
+                          ? `✓  Concluir · ${formatActiveTime(exerciseElapsed)}`
+                          : '▶  Iniciar exercício'}
+                      </Text>
                     </TouchableOpacity>
+                    {!isSessionActive && (
+                      <Text className="text-secondary-text text-xs text-center mt-2">
+                        Inicie o treino para acompanhar o tempo deste exercício.
+                      </Text>
+                    )}
                   </View>
-
-                  {/* Iniciar / concluir exercício */}
-                  <TouchableOpacity
-                    onPress={handleExerciseStartOrFinish}
-                    disabled={!isSessionActive}
-                    activeOpacity={0.85}
-                    className="rounded-xl items-center justify-center py-3.5"
-                    style={{
-                      backgroundColor: exerciseTimerStartedAt ? '#1E1E1E' : '#D62828',
-                      borderWidth: exerciseTimerStartedAt ? 1 : 0,
-                      borderColor: '#D62828',
-                      opacity: isSessionActive ? 1 : 0.4,
-                    }}
-                  >
-                    <Text
-                      className="font-bold text-sm"
-                      style={{ color: exerciseTimerStartedAt ? '#D62828' : '#fff' }}
-                    >
-                      {exerciseTimerStartedAt
-                        ? `✓  Concluir · ${formatActiveTime(exerciseElapsed)}`
-                        : '▶  Iniciar exercício'}
-                    </Text>
-                  </TouchableOpacity>
-                  {!isSessionActive && (
-                    <Text className="text-secondary-text text-xs text-center mt-2">
-                      Inicie o treino para acompanhar o tempo deste exercício.
-                    </Text>
-                  )}
                 </View>
-              </View>
+              </Animated.View>
             )}
 
             {/* Próximos exercícios */}

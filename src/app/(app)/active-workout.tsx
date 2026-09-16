@@ -102,10 +102,14 @@ export default function ActiveWorkoutScreen() {
 
   const user = useAuthStore((s) => s.user);
   const workouts = useWorkoutStore((s) => s.workouts);
+  const doneIds = useWorkoutStore((s) => s.activeSessionDoneExerciseIds);
   const addCompletedSession = useWorkoutStore((s) => s.addCompletedSession);
   const addExerciseTimeLog = useWorkoutStore((s) => s.addExerciseTimeLog);
   const startActiveSession = useWorkoutStore((s) => s.startActiveSession);
   const clearActiveSession = useWorkoutStore((s) => s.clearActiveSession);
+  const markExerciseDone = useWorkoutStore((s) => s.markExerciseDone);
+  const reopenExercise = useWorkoutStore((s) => s.reopenExercise);
+  const resetActiveSessionProgress = useWorkoutStore((s) => s.resetActiveSessionProgress);
   const allExercises = useAllExercises();
 
   // Active workout/day (can be swapped via "Trocar treino")
@@ -123,9 +127,6 @@ export default function ActiveWorkoutScreen() {
   // Elapsed time (seconds) at the last exercise marked as done — used to log
   // per-exercise duration for the evolution charts.
   const lastCheckpointRef = useRef<number>(0);
-
-  // Exercise checklist
-  const [doneIds, setDoneIds] = useState<string[]>([]);
 
   // Modals
   const [showStopConfirm, setShowStopConfirm] = useState(false);
@@ -188,12 +189,6 @@ export default function ActiveWorkoutScreen() {
     }
   }, [elapsed]);
 
-  // Reset checklist when workout changes
-  useEffect(() => {
-    setDoneIds([]);
-    lastCheckpointRef.current = elapsed;
-  }, [currentWorkoutId, currentDayId]);
-
   if (!workout || !day) {
     return (
       <View className="flex-1 bg-background items-center justify-center px-8">
@@ -223,15 +218,17 @@ export default function ActiveWorkoutScreen() {
   const allWorkoutDays = workouts.flatMap((w) => w.days.map((d) => ({ workout: w, day: d })));
 
   function toggleDone(exId: string) {
-    setDoneIds((prev) => {
-      const alreadyDone = prev.includes(exId);
-      if (!alreadyDone && user) {
-        const seconds = Math.max(0, elapsed - lastCheckpointRef.current);
-        lastCheckpointRef.current = elapsed;
-        addExerciseTimeLog(exId, seconds);
-      }
-      return alreadyDone ? prev.filter((id) => id !== exId) : [...prev, exId];
-    });
+    const alreadyDone = doneIds.includes(exId);
+    if (alreadyDone) {
+      reopenExercise(exId);
+      return;
+    }
+    if (user) {
+      const seconds = Math.max(0, elapsed - lastCheckpointRef.current);
+      lastCheckpointRef.current = elapsed;
+      addExerciseTimeLog(exId, seconds);
+    }
+    markExerciseDone(exId);
   }
 
   function handleAbandon() {
@@ -257,6 +254,8 @@ export default function ActiveWorkoutScreen() {
   function handleChangeWorkout(newWorkoutId: string, newDayId: string) {
     setCurrentWorkoutId(newWorkoutId);
     setCurrentDayId(newDayId);
+    resetActiveSessionProgress();
+    lastCheckpointRef.current = elapsed;
     setShowChangePicker(false);
   }
 
