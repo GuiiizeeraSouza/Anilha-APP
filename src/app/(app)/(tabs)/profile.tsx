@@ -2,7 +2,6 @@ import { File } from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Header } from 'expo-router/react-navigation';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
@@ -88,7 +87,10 @@ export default function ProfileScreen() {
 
   return (
     <Container safe={false}>
-      <Header title="Perfil" />
+      <View className="px-5 pt-14 pb-4 border-b border-border">
+        <Text className="text-text text-lg font-bold">Perfil</Text>
+        <Text className="text-secondary-text text-xs">Gerencie sua conta</Text>
+      </View>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 24 }}

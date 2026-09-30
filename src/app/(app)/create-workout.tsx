@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,6 +16,8 @@ import {
 
 import * as workoutService from '@/lib/workout-service';
 import { generateId } from '@/lib/uuid';
+import { ExercisePreviewModal } from '@/modules/workouts/components/exercise-preview-modal';
+import { ExerciseThumb } from '@/modules/workouts/components/exercise-thumb';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { PRESET_TEMPLATES } from '@/modules/workouts/data/presets';
 import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
@@ -116,6 +119,8 @@ export default function CreateWorkoutScreen() {
   const [newExerciseMuscleId, setNewExerciseMuscleId] = useState<string | null>(null);
   const [weekdayError, setWeekdayError] = useState(false);
   const [uploadingGifId, setUploadingGifId] = useState<string | null>(null);
+  // Gif em tamanho grande de um exercício, no contexto de um dia de treino.
+  const [preview, setPreview] = useState<{ dayId: string; exerciseId: string } | null>(null);
 
   const stepIndex = STEPS.indexOf(step);
 
@@ -376,6 +381,8 @@ export default function CreateWorkoutScreen() {
     return pickerMuscleIds.length === 0 || pickerMuscleIds.includes(e.muscleGroupId);
   });
 
+  const previewDay = preview ? days.find((d) => d.id === preview.dayId) : undefined;
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -598,10 +605,15 @@ export default function CreateWorkoutScreen() {
                     {/* Exercise chips */}
                     {day.muscleGroupIds.length > 0 && (
                       <>
-                        <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider mt-4 mb-2">
-                          Exercícios
-                        </Text>
-                        <View className="flex-row flex-wrap gap-2">
+                        <View className="flex-row items-baseline justify-between mt-4 mb-2">
+                          <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider">
+                            Exercícios
+                          </Text>
+                          <Text className="text-secondary-text" style={{ fontSize: 11 }}>
+                            Toque para adicionar · ⤢ para ampliar
+                          </Text>
+                        </View>
+                        <View className="flex-row flex-wrap justify-between">
                           {dayExercises.map((ex) => {
                             const selected = day.exercises.some((cfg) => cfg.exerciseId === ex.id);
                             const muscle = getMuscleGroup(ex.muscleGroupId);
@@ -610,16 +622,55 @@ export default function CreateWorkoutScreen() {
                               <TouchableOpacity
                                 key={ex.id}
                                 onPress={() => toggleExercise(day.id, ex.id)}
-                                activeOpacity={0.7}
-                                className="rounded-full px-3 py-1.5 border"
+                                activeOpacity={0.8}
+                                className="rounded-xl overflow-hidden mb-2"
                                 style={{
-                                  backgroundColor: selected ? color + '22' : '#121212',
+                                  width: '48.5%',
+                                  backgroundColor: selected ? color + '18' : '#121212',
                                   borderColor: selected ? color : '#2A2A2A',
+                                  borderWidth: selected ? 2 : 1,
                                 }}
                               >
+                                {ex.gif ? (
+                                  <Image
+                                    source={ex.gif}
+                                    style={{ width: '100%', height: 96, backgroundColor: '#121212' }}
+                                    contentFit="contain"
+                                  />
+                                ) : (
+                                  <View className="items-center justify-center" style={{ height: 96 }}>
+                                    <Text style={{ fontSize: 26 }}>🏋️</Text>
+                                    <Text className="text-secondary-text mt-1" style={{ fontSize: 10 }}>
+                                      Sem gif
+                                    </Text>
+                                  </View>
+                                )}
+
+                                {/* Selecionado */}
+                                {selected && (
+                                  <View
+                                    className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full items-center justify-center"
+                                    style={{ backgroundColor: color }}
+                                  >
+                                    <Text className="text-white text-xs font-bold">✓</Text>
+                                  </View>
+                                )}
+
+                                {/* Ampliar */}
+                                <TouchableOpacity
+                                  onPress={() => setPreview({ dayId: day.id, exerciseId: ex.id })}
+                                  activeOpacity={0.7}
+                                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                                  className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full items-center justify-center"
+                                  style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+                                >
+                                  <Ionicons name="expand-outline" size={14} color="#FFFFFF" />
+                                </TouchableOpacity>
+
                                 <Text
-                                  className="text-xs"
-                                  style={{ color: selected ? color : '#A0A0A0' }}
+                                  className="text-xs font-medium px-2 py-2"
+                                  style={{ color: selected ? '#FFFFFF' : '#A0A0A0' }}
+                                  numberOfLines={2}
                                 >
                                   {ex.name}
                                   {ex.isCustom ? ' ★' : ''}
@@ -644,21 +695,31 @@ export default function CreateWorkoutScreen() {
                             return (
                               <View
                                 key={cfg.exerciseId}
-                                className="flex-row items-center gap-2 bg-background rounded-xl px-3 py-2"
+                                className="flex-row items-center gap-3 bg-background rounded-xl p-2.5"
                               >
-                                <Text className="text-text text-xs flex-1" numberOfLines={1}>
-                                  {ex.name}
-                                </Text>
-                                <Stepper
-                                  label="séries"
-                                  value={cfg.sets}
-                                  onChange={(v) => updateExerciseConfig(day.id, cfg.exerciseId, { sets: v })}
-                                />
-                                <Stepper
-                                  label="reps"
-                                  value={cfg.reps}
-                                  onChange={(v) => updateExerciseConfig(day.id, cfg.exerciseId, { reps: v })}
-                                />
+                                <TouchableOpacity
+                                  onPress={() => setPreview({ dayId: day.id, exerciseId: ex.id })}
+                                  activeOpacity={0.8}
+                                >
+                                  <ExerciseThumb exercise={ex} size={52} />
+                                </TouchableOpacity>
+                                <View className="flex-1 gap-2">
+                                  <Text className="text-text text-sm font-medium" numberOfLines={1}>
+                                    {ex.name}
+                                  </Text>
+                                  <View className="flex-row items-center gap-4">
+                                    <Stepper
+                                      label="séries"
+                                      value={cfg.sets}
+                                      onChange={(v) => updateExerciseConfig(day.id, cfg.exerciseId, { sets: v })}
+                                    />
+                                    <Stepper
+                                      label="reps"
+                                      value={cfg.reps}
+                                      onChange={(v) => updateExerciseConfig(day.id, cfg.exerciseId, { reps: v })}
+                                    />
+                                  </View>
+                                </View>
                               </View>
                             );
                           })}
@@ -779,25 +840,26 @@ export default function CreateWorkoutScreen() {
               </View>
 
               {day.exercises.length > 0 && (
-                <View className="gap-1.5 pl-11">
+                <View className="gap-2 pl-11">
                   {day.exercises.map((cfg) => {
                     const ex = getExercise(cfg.exerciseId);
                     if (!ex) return null;
-                    const muscle = getMuscleGroup(ex.muscleGroupId);
                     return (
-                      <View key={cfg.exerciseId} className="flex-row items-center gap-2">
-                        <View
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: muscle?.color ?? '#D62828' }}
-                        />
-                        <Text className="text-secondary-text text-sm flex-1">
+                      <TouchableOpacity
+                        key={cfg.exerciseId}
+                        onPress={() => setPreview({ dayId: day.id, exerciseId: ex.id })}
+                        activeOpacity={0.8}
+                        className="flex-row items-center gap-2.5"
+                      >
+                        <ExerciseThumb exercise={ex} size={32} radius={6} />
+                        <Text className="text-secondary-text text-sm flex-1" numberOfLines={1}>
                           {ex.name}
                           {ex.isCustom ? ' ★' : ''}
                         </Text>
                         <Text className="text-secondary-text text-xs">
                           {cfg.sets}x{cfg.reps}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -1014,6 +1076,17 @@ export default function CreateWorkoutScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Gif ampliado ───────────────────────────────────────────────── */}
+      <ExercisePreviewModal
+        exercise={preview ? getExercise(preview.exerciseId) ?? null : null}
+        dayLabel={previewDay?.label ?? ''}
+        selected={previewDay?.exercises.some((cfg) => cfg.exerciseId === preview?.exerciseId) ?? false}
+        uploadingGif={preview !== null && uploadingGifId === preview.exerciseId}
+        onToggle={() => preview && toggleExercise(preview.dayId, preview.exerciseId)}
+        onAddGif={() => preview && handleAddGif(preview.exerciseId)}
+        onClose={() => setPreview(null)}
+      />
     </View>
   );
 }

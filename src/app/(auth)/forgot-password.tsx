@@ -19,6 +19,7 @@ export default function ForgotPasswordScreen() {
     formState: { errors },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
   });
 
   return (

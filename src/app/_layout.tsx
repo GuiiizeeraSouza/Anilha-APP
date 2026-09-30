@@ -93,6 +93,11 @@ export default function RootLayout() {
   // Carrega dados do Supabase quando o usuário loga; limpa quando desloga
   const userId = session?.user?.id;
   useEffect(() => {
+    // Enquanto getSession() não responde, session ainda é null mesmo com o
+    // usuário logado — resetar aqui apagaria o treino em andamento que acabou
+    // de ser restaurado do AsyncStorage (ex: app recarregado após bloquear o
+    // celular). Só limpa quando já sabemos que não há sessão (logout).
+    if (loading) return;
     if (!userId) {
       resetStore();
       return;
@@ -114,7 +119,7 @@ export default function RootLayout() {
         setExerciseTimeLogs(exerciseTimeLogs);
       })
       .catch(console.error);
-  }, [userId]);
+  }, [userId, loading]);
 
   // Redireciona conforme estado de autenticação
   useEffect(() => {

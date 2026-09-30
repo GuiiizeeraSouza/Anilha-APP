@@ -19,6 +19,7 @@ export default function LoginScreen() {
     formState: { errors },
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
+    defaultValues: { email: '', password: '' },
   });
 
   return (

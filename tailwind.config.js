@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  // 'class' (not the default 'media') so NativeWind's web runtime doesn't throw
+  // when it tries to sync the color scheme in dev. The app is dark-only anyway.
+  darkMode: 'class',
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
