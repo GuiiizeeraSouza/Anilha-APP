@@ -13,6 +13,7 @@ import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
 import type { Exercise, WorkoutExercise } from '@/modules/workouts/types';
 import { Container } from '@/shared/components/container';
+import { ProfileButton } from '@/shared/components/profile-button';
 import { Colors } from '@/shared/theme/colors';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
@@ -370,6 +371,7 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
+        <ProfileButton />
       </View>
 
       <ScrollView

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
+import { ProfileButton } from '@/shared/components/profile-button';
 import { useWorkoutStore } from '@/store/workout-store';
 
 export default function WorkoutsScreen() {
@@ -39,6 +40,7 @@ export default function WorkoutsScreen() {
         >
           <Text className="text-white text-xs font-bold">＋ Novo</Text>
         </TouchableOpacity>
+        <ProfileButton />
       </View>
 
       {workouts.length === 0 ? (

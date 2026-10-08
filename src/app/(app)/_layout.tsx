@@ -15,6 +15,7 @@ export default function AppLayout() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen name="active-workout" />
+      <Stack.Screen name="profile" />
     </Stack>
   );
 }

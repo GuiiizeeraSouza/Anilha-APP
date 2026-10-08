@@ -34,17 +34,19 @@ export default function TabsLayout() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="running">
+        <NativeTabs.Trigger.Label>Corrida</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="footsteps-outline" />}
+        />
+      </NativeTabs.Trigger>
+
+      {/* Perfil fica fora das abas (botão com a foto no cabeçalho) — as abas
+          nativas aceitam no máximo 5 itens. */}
       <NativeTabs.Trigger name="social">
         <NativeTabs.Trigger.Label>Social</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="people-outline" />}
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="person-circle-outline" />}
         />
       </NativeTabs.Trigger>
     </NativeTabs>

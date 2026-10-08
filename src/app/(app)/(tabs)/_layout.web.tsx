@@ -15,8 +15,8 @@ const TABS: { href: Href; label: string; icon: keyof typeof Ionicons.glyphMap }[
   { href: '/workouts', label: 'Treinos', icon: 'barbell-outline' },
   { href: '/evolution', label: 'Evolução', icon: 'stats-chart-outline' },
   { href: '/home', label: 'Treino do dia', icon: 'flame-outline' },
+  { href: '/running', label: 'Corrida', icon: 'footsteps-outline' },
   { href: '/social', label: 'Social', icon: 'people-outline' },
-  { href: '/profile', label: 'Perfil', icon: 'person-circle-outline' },
 ];
 
 export default function TabsLayoutWeb() {

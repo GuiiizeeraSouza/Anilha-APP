@@ -16,6 +16,8 @@ interface LineChartProps {
   formatTick: (value: number) => string;
   emptyLabel: string;
   plotHeight?: number;
+  // Quando menor é melhor (ex: pace), inverte o eixo para "subir" = melhorar.
+  invertY?: boolean;
 }
 
 // Linha de uma única série (ex: peso ao longo do tempo), com eixo y ajustado ao
@@ -28,6 +30,7 @@ export function LineChart({
   formatTick,
   emptyLabel,
   plotHeight = 110,
+  invertY = false,
 }: LineChartProps) {
   const data = allData.slice(-MAX_POINTS);
   const [width, setWidth] = useState(0);
@@ -57,9 +60,13 @@ export function LineChart({
   const plotWidth = Math.max(width - Y_AXIS_WIDTH, 0);
   const xFor = (i: number) =>
     data.length === 1 ? plotWidth / 2 : DOT / 2 + (i / (data.length - 1)) * (plotWidth - DOT);
-  const yFor = (v: number) => plotHeight - ((v - lo) / (hi - lo)) * plotHeight;
+  const yFor = (v: number) => {
+    const t = (v - lo) / (hi - lo);
+    return invertY ? t * plotHeight : plotHeight - t * plotHeight;
+  };
   const points = data.map((d, i) => ({ x: xFor(i), y: yFor(d.value) }));
-  const ticks = [hi, (hi + lo) / 2, lo];
+  // Rótulos do eixo y de cima para baixo.
+  const ticks = invertY ? [lo, (hi + lo) / 2, hi] : [hi, (hi + lo) / 2, lo];
 
   return (
     <View>

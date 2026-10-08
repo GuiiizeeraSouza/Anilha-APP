@@ -58,7 +58,13 @@
         }
       ],
       "expo-image",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permitir que o Anilha use sua localização para medir a distância e o ritmo das suas corridas."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

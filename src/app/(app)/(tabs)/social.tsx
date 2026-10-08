@@ -30,6 +30,7 @@ import {
     uploadCheckinPhoto,
 } from '@/lib/friend-service';
 import { Container } from '@/shared/components/container';
+import { ProfileButton } from '@/shared/components/profile-button';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
@@ -258,6 +259,7 @@ export default function SocialScreen() {
         >
           <Text style={{ color: rankLoading ? '#3A3A3A' : '#D62828', fontSize: 20, fontWeight: 'bold' }}>↻</Text>
         </TouchableOpacity>
+        <ProfileButton />
       </View>
 
       <ScrollView

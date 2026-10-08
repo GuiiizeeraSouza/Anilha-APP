@@ -2,25 +2,33 @@ import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { OverviewEvolution } from '@/modules/evolution/components/overview-evolution';
+import { RunningEvolution } from '@/modules/evolution/components/running-evolution';
 import { WorkoutEvolution } from '@/modules/evolution/components/workout-evolution';
-import { Colors } from '@/shared/theme/colors';
 import { Container } from '@/shared/components/container';
+import { ProfileButton } from '@/shared/components/profile-button';
+import { Colors } from '@/shared/theme/colors';
 
-type Tab = 'workouts' | 'overview';
+type Tab = 'overview' | 'workouts' | 'running';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'workouts', label: 'Por treino' },
   { id: 'overview', label: 'Visão geral' },
+  { id: 'workouts', label: 'Por treino' },
+  { id: 'running', label: 'Corrida' },
 ];
 
 export default function EvolutionScreen() {
-  const [tab, setTab] = useState<Tab>('workouts');
+  const [tab, setTab] = useState<Tab>('overview');
 
   return (
     <Container safe={false}>
       <View className="px-5 pt-14 pb-4 border-b border-border">
-        <Text className="text-text text-lg font-bold">Evolução</Text>
-        <Text className="text-secondary-text text-xs">Seu progresso em cada treino</Text>
+        <View className="flex-row items-center">
+          <View className="flex-1">
+            <Text className="text-text text-lg font-bold">Evolução</Text>
+            <Text className="text-secondary-text text-xs">Seu progresso nos treinos e corridas</Text>
+          </View>
+          <ProfileButton />
+        </View>
 
         <View className="flex-row bg-card rounded-xl p-1 mt-4 border border-border">
           {TABS.map((t) => {
@@ -47,7 +55,13 @@ export default function EvolutionScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
       >
-        {tab === 'workouts' ? <WorkoutEvolution /> : <OverviewEvolution />}
+        {tab === 'overview' ? (
+          <OverviewEvolution />
+        ) : tab === 'workouts' ? (
+          <WorkoutEvolution />
+        ) : (
+          <RunningEvolution />
+        )}
       </ScrollView>
     </Container>
   );

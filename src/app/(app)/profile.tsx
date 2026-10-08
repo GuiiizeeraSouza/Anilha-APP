@@ -87,9 +87,19 @@ export default function ProfileScreen() {
 
   return (
     <Container safe={false}>
-      <View className="px-5 pt-14 pb-4 border-b border-border">
-        <Text className="text-text text-lg font-bold">Perfil</Text>
-        <Text className="text-secondary-text text-xs">Gerencie sua conta</Text>
+      <View className="flex-row items-center px-5 pt-14 pb-4 border-b border-border">
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
+          activeOpacity={0.7}
+          hitSlop={8}
+          className="w-9 h-9 rounded-full bg-card border border-border items-center justify-center mr-3"
+        >
+          <Text className="text-text text-lg">‹</Text>
+        </TouchableOpacity>
+        <View className="flex-1">
+          <Text className="text-text text-lg font-bold">Perfil</Text>
+          <Text className="text-secondary-text text-xs">Gerencie sua conta</Text>
+        </View>
       </View>
       <ScrollView
         className="flex-1"

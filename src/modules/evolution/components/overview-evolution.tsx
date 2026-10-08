@@ -1,6 +1,9 @@
 import { Text, View } from 'react-native';
 
+import { thisWeekRuns, totalMeters } from '@/modules/running/stats';
+import { formatKm } from '@/modules/running/utils';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
+import { useRunStore } from '@/store/run-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
 import { computeStreak, formatDuration, formatShortDate, startOfWeek } from '../utils';
@@ -16,20 +19,22 @@ const WEEKS_SHOWN = 8;
 const WEEK_DAY_KEYS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 const WEEKDAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
-// Aba "Visão geral": números de todos os treinos juntos.
+// Aba "Visão geral": números de todos os treinos (e corridas) juntos.
 export function OverviewEvolution() {
   const workouts = useWorkoutStore((s) => s.workouts);
   const completedSessions = useWorkoutStore((s) => s.completedSessions);
+  const runs = useRunStore((s) => s.runs);
 
-  if (completedSessions.length === 0) {
+  if (completedSessions.length === 0 && runs.length === 0) {
     return (
       <EmptyCard
         icon="📊"
-        title="Sem treinos concluídos"
-        text="Finalize um treino na aba Treino do dia para ver suas estatísticas aqui."
+        title="Nada registrado ainda"
+        text="Finalize um treino na aba Treino do dia ou registre uma corrida para ver suas estatísticas aqui."
       />
     );
   }
+  const hasWorkouts = completedSessions.length > 0;
 
   // ── Esta semana ────────────────────────────────────────────────────────────
   const monday = startOfWeek(new Date());
@@ -42,7 +47,9 @@ export function OverviewEvolution() {
     workouts.some((w) => w.days.some((d) => d.weekDays.includes(key))),
   ).length;
   const weekSeconds = weekSessions.reduce((acc, s) => acc + s.durationSeconds, 0);
-  const streak = computeStreak(completedSessions.map((s) => s.completedAt));
+  // Sequência conta qualquer atividade: treino ou corrida.
+  const streak = computeStreak([...completedSessions.map((s) => s.completedAt), ...runs.map((r) => r.startedAt)]);
+  const weekRuns = thisWeekRuns(runs);
 
   // ── Consistência: sessões por semana ───────────────────────────────────────
   const weeks = Array.from({ length: WEEKS_SHOWN }, (_, i) => {
@@ -62,7 +69,7 @@ export function OverviewEvolution() {
 
   // ── Totais ─────────────────────────────────────────────────────────────────
   const totalSeconds = completedSessions.reduce((acc, s) => acc + s.durationSeconds, 0);
-  const avgSeconds = Math.round(totalSeconds / completedSessions.length);
+  const avgSeconds = hasWorkouts ? Math.round(totalSeconds / completedSessions.length) : 0;
   const weekdayCounts = WEEKDAY_NAMES.map((_, i) =>
     completedSessions.filter((s) => new Date(s.completedAt).getDay() === i).length,
   );
@@ -93,26 +100,36 @@ export function OverviewEvolution() {
           <StatTile label="Tempo" value={weekSeconds > 0 ? formatDuration(weekSeconds) : '—'} />
           <StatTile label="Sequência" value={`${streak} ${streak === 1 ? 'dia' : 'dias'}`} />
         </View>
+        {runs.length > 0 && (
+          <View className="flex-row gap-2 mt-2">
+            <StatTile label="Corrida" value={`${formatKm(totalMeters(weekRuns), 1)} km`} />
+            <StatTile label="Corridas" value={String(weekRuns.length)} />
+          </View>
+        )}
       </SectionCard>
 
       <AiSuggestionsCard />
 
-      <SectionCard title="Consistência" aside="Treinos por semana">
-        <ColumnChart data={weeks} emptyLabel="" plotHeight={80} />
-      </SectionCard>
+      {hasWorkouts && (
+        <SectionCard title="Consistência" aside="Treinos por semana">
+          <ColumnChart data={weeks} emptyLabel="" plotHeight={80} />
+        </SectionCard>
+      )}
 
-      <SectionCard title="Totais">
-        <View className="gap-2">
-          <View className="flex-row gap-2">
-            <StatTile label="Treinos concluídos" value={String(completedSessions.length)} />
-            <StatTile label="Duração média" value={formatDuration(avgSeconds)} />
+      {hasWorkouts && (
+        <SectionCard title="Totais">
+          <View className="gap-2">
+            <View className="flex-row gap-2">
+              <StatTile label="Treinos concluídos" value={String(completedSessions.length)} />
+              <StatTile label="Duração média" value={formatDuration(avgSeconds)} />
+            </View>
+            <View className="flex-row gap-2">
+              <StatTile label="Tempo total" value={formatDuration(totalSeconds)} />
+              <StatTile label="Dia mais ativo" value={WEEKDAY_NAMES[bestWeekdayIndex]} />
+            </View>
           </View>
-          <View className="flex-row gap-2">
-            <StatTile label="Tempo total" value={formatDuration(totalSeconds)} />
-            <StatTile label="Dia mais ativo" value={WEEKDAY_NAMES[bestWeekdayIndex]} />
-          </View>
-        </View>
-      </SectionCard>
+        </SectionCard>
+      )}
 
       {muscles.length > 0 && (
         <SectionCard title="Grupos musculares" aside="Sessões por grupo">

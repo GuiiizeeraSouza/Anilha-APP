@@ -7,9 +7,11 @@ import { useEffect } from 'react';
 import '@/global.css';
 import { savePushToken } from '@/lib/notification-service';
 import { supabase } from '@/lib/supabase';
+import * as runService from '@/lib/run-service';
 import * as workoutService from '@/lib/workout-service';
 import { parseAuthCallbackUrl } from '@/modules/auth/utils/parse-auth-callback-url';
 import { useAuthStore } from '@/store/auth-store';
+import { useRunStore } from '@/store/run-store';
 import { useWorkoutStore } from '@/store/workout-store';
 
 // Show notifications while app is in the foreground
@@ -35,7 +37,11 @@ export default function RootLayout() {
   const setWeightLogs = useWorkoutStore((s) => s.setWeightLogs);
   const setExerciseTimeLogs = useWorkoutStore((s) => s.setExerciseTimeLogs);
   const resetStore = useWorkoutStore((s) => s.resetStore);
-  const hasHydrated = useWorkoutStore((s) => s.hasHydrated);
+  const workoutsHydrated = useWorkoutStore((s) => s.hasHydrated);
+  const setRuns = useRunStore((s) => s.setRuns);
+  const resetRunStore = useRunStore((s) => s.resetStore);
+  const runsHydrated = useRunStore((s) => s.hasHydrated);
+  const hasHydrated = workoutsHydrated && runsHydrated;
 
   // Inicializa a sessão e registra listener de mudança de autenticação
   useEffect(() => {
@@ -100,6 +106,7 @@ export default function RootLayout() {
     if (loading) return;
     if (!userId) {
       resetStore();
+      resetRunStore();
       return;
     }
     Promise.all([
@@ -119,6 +126,10 @@ export default function RootLayout() {
         setExerciseTimeLogs(exerciseTimeLogs);
       })
       .catch(console.error);
+
+    // Separado do Promise.all acima: se a tabela de corridas ainda não existir
+    // (migration 009 não aplicada), isso não pode impedir o resto de carregar.
+    runService.fetchRuns(userId).then(setRuns).catch(console.error);
   }, [userId, loading]);
 
   // Redireciona conforme estado de autenticação
@@ -141,10 +152,10 @@ export default function RootLayout() {
     }
   }, [session, loading, hasHydrated, segments, router, isPasswordRecovery]);
 
-  // Espera o workout-store terminar de ler o AsyncStorage antes de montar
-  // qualquer tela — telas como active-workout.tsx decidem "retomar ou
-  // iniciar sessão" a partir de activeSession assim que montam, e um mount
-  // antes da hidratação terminar veria o valor ainda como null.
+  // Espera os stores persistidos (treino e corrida) terminarem de ler o
+  // AsyncStorage antes de montar qualquer tela — telas como active-workout.tsx
+  // e running.tsx decidem "retomar ou iniciar" a partir do estado salvo assim
+  // que montam, e um mount antes da hidratação veria o valor ainda como null.
   if (loading || !hasHydrated) return null;
 
   return (
