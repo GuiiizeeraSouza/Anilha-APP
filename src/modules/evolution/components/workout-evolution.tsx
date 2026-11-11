@@ -38,6 +38,8 @@ export function WorkoutEvolution() {
   const completedSessions = useWorkoutStore((s) => s.completedSessions);
   const weightLogs = useWorkoutStore((s) => s.weightLogs);
   const timeLogs = useWorkoutStore((s) => s.exerciseTimeLogs);
+  const updateWorkout = useWorkoutStore((s) => s.updateWorkout);
+  const addWeightLog = useWorkoutStore((s) => s.addWeightLog);
   const allExercises = useAllExercises();
 
   const [pickedWorkoutId, setPickedWorkoutId] = useState<string | null>(null);
@@ -87,6 +89,21 @@ export function WorkoutEvolution() {
   function pickDay(id: string) {
     setPickedDayId(id);
     setExpandedExerciseId(null);
+  }
+
+  // Mesmo efeito de concluir o exercício no Treino do dia: atualiza a carga
+  // configurada e registra o peso no histórico.
+  function saveExerciseWeight(exerciseId: string, weight: number) {
+    if (!workout || !day) return;
+    updateWorkout({
+      ...workout,
+      days: workout.days.map((d) =>
+        d.id === day.id
+          ? { ...d, exercises: d.exercises.map((e) => (e.exerciseId === exerciseId ? { ...e, weight } : e)) }
+          : d,
+      ),
+    });
+    addWeightLog(exerciseId, weight);
   }
 
   const daySessions = day ? workoutSessions.filter((s) => s.dayId === day.id) : [];
@@ -227,6 +244,7 @@ export function WorkoutEvolution() {
                 timeLogs={timeByExercise.get(ex.id) ?? NO_TIME_LOGS}
                 expanded={expandedExerciseId === ex.id}
                 onToggle={() => setExpandedExerciseId((cur) => (cur === ex.id ? null : ex.id))}
+                onSaveWeight={(weight) => saveExerciseWeight(ex.id, weight)}
               />
             ))
           )}

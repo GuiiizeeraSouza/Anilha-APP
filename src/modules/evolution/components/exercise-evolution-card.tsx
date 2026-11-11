@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { ExerciseTimeLog, WeightLog } from '@/lib/workout-service';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
@@ -18,6 +18,16 @@ import { LineChart } from './line-chart';
 import { StatTile } from './stat-tile';
 
 const HISTORY_ROWS = 5;
+const WEIGHT_STEP = 2.5;
+
+function formatWeightInput(kg: number): string {
+  return String(Math.round(kg * 100) / 100).replace('.', ',');
+}
+
+function parseWeightInput(text: string): number | null {
+  const n = parseFloat(text.replace(',', '.'));
+  return Number.isFinite(n) ? Math.max(0, n) : null;
+}
 
 interface ExerciseEvolutionCardProps {
   exercise: Exercise;
@@ -26,6 +36,7 @@ interface ExerciseEvolutionCardProps {
   timeLogs: ExerciseTimeLog[];
   expanded: boolean;
   onToggle: () => void;
+  onSaveWeight: (weight: number) => void;
 }
 
 function formatSignedKg(delta: number): string {
@@ -40,7 +51,24 @@ export function ExerciseEvolutionCard({
   timeLogs,
   expanded,
   onToggle,
+  onSaveWeight,
 }: ExerciseEvolutionCardProps) {
+  const [weightDraft, setWeightDraft] = useState<string | null>(null);
+  const weightText = weightDraft ?? formatWeightInput(config.weight);
+  const parsedWeight = parseWeightInput(weightText);
+  const canSaveWeight = parsedWeight !== null && parsedWeight > 0 && parsedWeight !== config.weight;
+
+  function stepWeight(direction: 1 | -1) {
+    const current = parsedWeight ?? config.weight;
+    setWeightDraft(formatWeightInput(Math.max(0, current + direction * WEIGHT_STEP)));
+  }
+
+  function saveWeight() {
+    if (!canSaveWeight || parsedWeight === null) return;
+    onSaveWeight(parsedWeight);
+    setWeightDraft(null);
+  }
+
   const muscle = MUSCLE_GROUPS.find((m) => m.id === exercise.muscleGroupId);
   const weightSeries = useMemo(() => lastValuePerDay(weightLogs, (l) => l.weight), [weightLogs]);
   const timeSeries = useMemo(() => lastValuePerDay(timeLogs, (l) => l.seconds), [timeLogs]);
@@ -107,6 +135,54 @@ export function ExerciseEvolutionCard({
             <StatTile label="Registros" value={String(Math.max(weightSeries.length, timeSeries.length))} />
             <StatTile label="Tempo médio" value={avgTime !== null ? formatExerciseTime(avgTime) : '—'} />
           </View>
+
+          <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider mt-5 mb-2">
+            Atualizar carga (kg)
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              onPress={() => stepWeight(-1)}
+              activeOpacity={0.7}
+              className="w-11 h-11 rounded-xl bg-background border border-border items-center justify-center"
+            >
+              <Text className="text-text text-lg font-bold">−</Text>
+            </TouchableOpacity>
+            <TextInput
+              value={weightText}
+              onChangeText={setWeightDraft}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              placeholder="0"
+              placeholderTextColor="#505050"
+              onSubmitEditing={saveWeight}
+              className="flex-1 bg-background rounded-xl text-text border border-border text-center font-bold"
+              style={{ height: 44, fontSize: 18 }}
+            />
+            <TouchableOpacity
+              onPress={() => stepWeight(1)}
+              activeOpacity={0.7}
+              className="w-11 h-11 rounded-xl bg-background border border-border items-center justify-center"
+            >
+              <Text className="text-text text-lg font-bold">+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={saveWeight}
+              disabled={!canSaveWeight}
+              activeOpacity={0.85}
+              className="h-11 px-4 rounded-xl items-center justify-center"
+              style={{ backgroundColor: canSaveWeight ? Colors.primary : Colors.border }}
+            >
+              <Text
+                className="font-bold text-sm"
+                style={{ color: canSaveWeight ? Colors.white : Colors.secondaryText }}
+              >
+                Salvar
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text className="text-secondary-text mt-1.5" style={{ fontSize: 11 }}>
+            Muda a carga do treino e registra no histórico de hoje.
+          </Text>
 
           <Text className="text-secondary-text text-xs font-semibold uppercase tracking-wider mt-5 mb-3">
             Peso utilizado
