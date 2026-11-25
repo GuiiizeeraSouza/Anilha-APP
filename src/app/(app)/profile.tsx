@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { signOut } from '@/modules/auth/services/auth-service';
+import { GymSettingsCard } from '@/modules/gym/components/gym-settings-card';
 
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/shared/components/button';
@@ -188,6 +189,8 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        <GymSettingsCard />
 
         <View className="mt-6">
           <Button title="Sair" onPress={handleSignOut} variant="ghost" />

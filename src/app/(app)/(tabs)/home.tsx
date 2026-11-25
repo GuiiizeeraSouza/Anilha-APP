@@ -3,14 +3,10 @@ import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { Animated, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { createCheckin, notifyFriendsWorkoutStarted } from '@/lib/friend-service';
-import {
-    cancelWorkoutNotification,
-    requestNotificationPermissions,
-    showWorkoutNotification,
-} from '@/lib/notification-service';
+import { refreshWorkoutTimer, stopWorkoutTimer } from '@/lib/workout-timer';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
+import { getScheduledEntry, startWorkoutSession } from '@/modules/workouts/schedule';
 import type { Exercise, WorkoutExercise } from '@/modules/workouts/types';
 import { Container } from '@/shared/components/container';
 import { ProfileButton } from '@/shared/components/profile-button';
@@ -128,7 +124,6 @@ export default function HomeScreen() {
   const doneExerciseIds = useWorkoutStore((s) => s.activeSessionDoneExerciseIds);
   const activeExerciseTimer = useWorkoutStore((s) => s.activeExerciseTimer);
   const updateWorkout = useWorkoutStore((s) => s.updateWorkout);
-  const startActiveSession = useWorkoutStore((s) => s.startActiveSession);
   const clearActiveSession = useWorkoutStore((s) => s.clearActiveSession);
   const addCompletedSession = useWorkoutStore((s) => s.addCompletedSession);
   const addWeightLog = useWorkoutStore((s) => s.addWeightLog);
@@ -153,26 +148,9 @@ export default function HomeScreen() {
 
   // ── Qual treino mostrar ─────────────────────────────────────────────────
   const today = new Date();
-  const TODAY_KEY = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][today.getDay()];
   const TODAY_LABEL = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][today.getDay()];
-  const todayEntry =
-    workouts
-      .flatMap((w) => w.days.filter((d) => d.weekDays.includes(TODAY_KEY)).map((d) => ({ workout: w, day: d })))[0]
-      ?? null;
-
-  // Sem treino agendado hoje: cai pro treino marcado como "principal",
-  // avançando pro próximo dia dele (round-robin pelas sessões já concluídas).
-  const primaryWorkout = workouts.find((w) => w.isPrimary) ?? null;
-  const fallbackEntry =
-    primaryWorkout && primaryWorkout.days.length > 0
-      ? (() => {
-          const doneForWorkout = completedSessions.filter((s) => s.workoutId === primaryWorkout.id).length;
-          const dayIndex = doneForWorkout % primaryWorkout.days.length;
-          return { workout: primaryWorkout, day: primaryWorkout.days[dayIndex] };
-        })()
-      : null;
-
-  const scheduledEntry = todayEntry ?? fallbackEntry;
+  // Programado para hoje ou, sem nada programado, o próximo do treino principal.
+  const scheduledEntry = getScheduledEntry(workouts, completedSessions, today);
 
   // Se já existe um treino em andamento, ele manda — mesmo que "hoje" mude.
   const sessionEntry = activeSession
@@ -189,7 +167,7 @@ export default function HomeScreen() {
   const dateLabel = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const badgeLabel = isSessionActive
     ? 'Treino em andamento'
-    : displayEntry === todayEntry
+    : scheduledEntry?.isToday
     ? `Programado para hoje · ${TODAY_LABEL}`
     : '★ Próximo do treino principal';
 
@@ -266,13 +244,7 @@ export default function HomeScreen() {
   async function handleStartWorkout() {
     if (!scheduledEntry || !user) return;
     setSelectedExerciseId(null);
-    startActiveSession(scheduledEntry.workout.id, scheduledEntry.day.id);
-    const label = `${scheduledEntry.workout.name} · Treino ${scheduledEntry.day.label}`;
-    requestNotificationPermissions().then((granted) => {
-      if (granted) showWorkoutNotification(label, 0);
-    });
-    createCheckin(user.id, null, `🏋️ Iniciou um treino · ${label}`).catch(() => {});
-    notifyFriendsWorkoutStarted(user.id, label);
+    startWorkoutSession(user.id, scheduledEntry.workout, scheduledEntry.day);
   }
 
   function handleCompleteExercise() {
@@ -314,7 +286,7 @@ export default function HomeScreen() {
 
   function handleFinishWorkout() {
     if (!activeSession) return;
-    cancelWorkoutNotification();
+    stopWorkoutTimer();
     addCompletedSession({
       workoutId: activeSession.workoutId,
       dayId: activeSession.dayId,
@@ -327,17 +299,18 @@ export default function HomeScreen() {
   }
 
   function handleDiscardWorkout() {
-    cancelWorkoutNotification();
+    stopWorkoutTimer();
     clearActiveSession();
     setSelectedExerciseId(null);
     setShowFinishConfirm(false);
   }
 
-  // Atualiza a notificação persistente a cada minuto de treino.
+  // Atualiza o cronômetro da notificação a cada minuto de treino (Android;
+  // no iPhone a Live Activity conta sozinha).
   useEffect(() => {
-    if (!sessionEntry) return;
+    if (!sessionEntry || !activeSession) return;
     if (activeElapsed > 0 && activeElapsed % 60 === 0) {
-      showWorkoutNotification(`${sessionEntry.workout.name} · Treino ${sessionEntry.day.label}`, activeElapsed);
+      refreshWorkoutTimer(`${sessionEntry.workout.name} · Treino ${sessionEntry.day.label}`, activeSession.startedAt);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeElapsed]);

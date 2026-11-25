@@ -1,9 +1,5 @@
 import { createCheckin, notifyFriendsWorkoutStarted } from '@/lib/friend-service';
-import {
-    cancelWorkoutNotification,
-    requestNotificationPermissions,
-    showWorkoutNotification,
-} from '@/lib/notification-service';
+import { refreshWorkoutTimer, startWorkoutTimer, stopWorkoutTimer } from '@/lib/workout-timer';
 import { MUSCLE_GROUPS } from '@/modules/workouts/data/muscle-groups';
 import { useAllExercises } from '@/modules/workouts/hooks/use-all-exercises';
 import type { Exercise, MuscleGroup, WorkoutExercise } from '@/modules/workouts/types';
@@ -167,10 +163,8 @@ export default function ActiveWorkoutScreen() {
 
     const label = `${workout.name} · Treino ${day.label}`;
 
-    // Show persistent local notification
-    requestNotificationPermissions().then((granted) => {
-      if (granted) showWorkoutNotification(label, 0);
-    });
+    // Cronômetro na notificação (Android) / Live Activity (iPhone)
+    startWorkoutTimer(label, startedAtRef.current);
 
     // Post timeline entry only when NOT coming from a check-in
     // (check-in already created the timeline entry in ranking.tsx)
@@ -182,10 +176,10 @@ export default function ActiveWorkoutScreen() {
     notifyFriendsWorkoutStarted(user.id, label);
   }, [user, workout, day]);
 
-  // Update notification every 60 seconds
+  // Update notification every 60 seconds (Android; iPhone's Live Activity ticks on its own)
   useEffect(() => {
     if (elapsed > 0 && elapsed % 60 === 0 && workout && day) {
-      showWorkoutNotification(`${workout.name} · Treino ${day.label}`, elapsed);
+      refreshWorkoutTimer(`${workout.name} · Treino ${day.label}`, startedAtRef.current);
     }
   }, [elapsed]);
 
@@ -234,14 +228,14 @@ export default function ActiveWorkoutScreen() {
   function handleAbandon() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     clearActiveSession();
-    cancelWorkoutNotification();
+    stopWorkoutTimer();
     router.back();
   }
 
   function handleFinish() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     clearActiveSession();
-    cancelWorkoutNotification();
+    stopWorkoutTimer();
     addCompletedSession({
       workoutId: currentWorkoutId,
       dayId: currentDayId,
